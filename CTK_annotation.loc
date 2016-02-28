@@ -4,32 +4,32 @@
 #***hg19***
 
 #for bed2annotation.pl
-hg19 gene	~/src/CTK/annotation/genes/gene2symbol.hg gene2symbol
-hg19 gene	~/src/CTK/annotation/genomes/hg19/annotation/refGene_knownGene.bed transcript
-hg19 gene	~/src/CTK/annotation/genomes/hg19/annotation/refGene_knownGene_To_gene.txt transcript2gene
+hg19 gene	/path/to/src/CTK/annotation/genes/gene2symbol.hg gene2symbol
+hg19 gene	/path/to/src/CTK/annotation/genomes/hg19/annotation/refGene_knownGene.bed transcript
+hg19 gene	/path/to/src/CTK/annotation/genomes/hg19/annotation/refGene_knownGene_To_gene.txt transcript2gene
 
 #note: these are non-overlapping regions after clustering, to reduce computing time
-hg19 region	~/src/CTK/annotation/genomes/hg19/annotation/hg19.genic.bed genic
-hg19 region	~/src/CTK/annotation/genomes/hg19/annotation/refGene_knownGene.upstream.10k.cluster.bed upstream_10k
-hg19 region	~/src/CTK/annotation/genomes/hg19/annotation/refGene_knownGene.downstream.10k.cluster.bed downstream_10k
-hg19 region	~/src/CTK/annotation/dbCASE/db_hg19/exons/hg19.exon.uniq.cluster.bed exon
-hg19 region	~/src/CTK/annotation/genomes/hg19/annotation/refGene_knownGene.5utr.cluster.bed 5utr
-hg19 region	~/src/CTK/annotation/genomes/hg19/annotation/refGene_knownGene.3utr.cluster.bed 3utr
-hg19 region	~/src/CTK/annotation/genomes/hg19/annotation/refGene_knownGene.cds.cluster.bed cds
+hg19 region	/path/to/src/CTK/annotation/genomes/hg19/annotation/hg19.genic.bed genic
+hg19 region	/path/to/src/CTK/annotation/genomes/hg19/annotation/refGene_knownGene.upstream.10k.cluster.bed upstream_10k
+hg19 region	/path/to/src/CTK/annotation/genomes/hg19/annotation/refGene_knownGene.downstream.10k.cluster.bed downstream_10k
+hg19 region	/path/to/src/CTK/annotation/dbCASE/db_hg19/exons/hg19.exon.uniq.cluster.bed exon
+hg19 region	/path/to/src/CTK/annotation/genomes/hg19/annotation/refGene_knownGene.5utr.cluster.bed 5utr
+hg19 region	/path/to/src/CTK/annotation/genomes/hg19/annotation/refGene_knownGene.3utr.cluster.bed 3utr
+hg19 region	/path/to/src/CTK/annotation/genomes/hg19/annotation/refGene_knownGene.cds.cluster.bed cds
 
 
 #***mm10****
 
 #for bed2annotation.pl
-mm10 gene	~/src/CTK/annotation/genes/gene2symbol.mm gene2symbol
-mm10 gene	~/src/CTK/annotation/genomes/mm10/annotation/refGene_knownGene.bed transcript
-mm10 gene	~/src/CTK/annotation/genomes/mm10/annotation/refGene_knownGene_To_gene.txt transcript2gene
+mm10 gene	/path/to/src/CTK/annotation/genes/gene2symbol.mm gene2symbol
+mm10 gene	/path/to/src/CTK/annotation/genomes/mm10/annotation/refGene_knownGene.bed transcript
+mm10 gene	/path/to/src/CTK/annotation/genomes/mm10/annotation/refGene_knownGene_To_gene.txt transcript2gene
 
 #note: these are non-overlapping regions after clustering, to reduce computing time
-mm10 region	~/src/CTK/annotation/genomes/mm10/annotation/mm10.genic.bed genic
-mm10 region	~/src/CTK/annotation/genomes/mm10/annotation/refGene_knownGene.upstream.10k.cluster.bed upstream_10k
-mm10 region	~/src/CTK/annotation/genomes/mm10/annotation/refGene_knownGene.downstream.10k.cluster.bed downstream_10k
-mm10 region	~/src/CTK/annotation/dbCASE/db_mm10/exons/mm10.exon.uniq.cluster.bed exon
-mm10 region	~/src/CTK/annotation/genomes/mm10/annotation/refGene_knownGene.5utr.cluster.bed 5utr
-mm10 region	~/src/CTK/annotation/genomes/mm10/annotation/refGene_knownGene.3utr.cluster.bed 3utr
-mm10 region	~/src/CTK/annotation/genomes/mm10/annotation/refGene_knownGene.cds.cluster.bed cds
+mm10 region	/path/to/src/CTK/annotation/genomes/mm10/annotation/mm10.genic.bed genic
+mm10 region	/path/to/src/CTK/annotation/genomes/mm10/annotation/refGene_knownGene.upstream.10k.cluster.bed upstream_10k
+mm10 region	/path/to/src/CTK/annotation/genomes/mm10/annotation/refGene_knownGene.downstream.10k.cluster.bed downstream_10k
+mm10 region	/path/to/src/CTK/annotation/dbCASE/db_mm10/exons/mm10.exon.uniq.cluster.bed exon
+mm10 region	/path/to/src/CTK/annotation/genomes/mm10/annotation/refGene_knownGene.5utr.cluster.bed 5utr
+mm10 region	/path/to/src/CTK/annotation/genomes/mm10/annotation/refGene_knownGene.3utr.cluster.bed 3utr
+mm10 region	/path/to/src/CTK/annotation/genomes/mm10/annotation/refGene_knownGene.cds.cluster.bed cds
