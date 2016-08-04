@@ -17,6 +17,7 @@ my $verbose = 0;
 my $mutationSize = 1;
 my $numIter = 5;
 my $trackPosition = 0;
+my $mutationPosSummaryFile = ""; #output position of mutations
 my $big = 0;
 
 my $noSparseCorrect = 0;
@@ -33,6 +34,7 @@ GetOptions ("n:i"=>\$numIter,
 		"c:s"=>\$cache,
 		'keep-cache'=>\$keepCache,
 		'p'=>\$trackPosition,
+		'outp:s'=>\$mutationPosSummaryFile,
 		'big'=>\$big,
 		'no-sparse-correct'=>\$noSparseCorrect,
 		'FDR:f'=>\$FDR,
@@ -44,16 +46,17 @@ GetOptions ("n:i"=>\$numIter,
 if (@ARGV != 3)
 {
 	print "identify significant CIMS\n";
-	print "Usage: $prog [options] <tag.bed> <mutation.bed> <out.txt>\n";
+	print "Usage: $prog [options] <tag.uniq.bed> <mutation.bed> <mutation.txt>\n";
 	print "Note: the 5th column of <mutation.bed> must have the position of the mutation relative to the chromStart of the tag\n";
 	print " -big               : big file\n";
-	print " -w   [int]         : mutation size ($mutationSize)\n";
-	print " -n   [int]         : number of iterations for permutation ($numIter)\n";
+	print " -w     [int]       : mutation size ($mutationSize)\n";
+	print " -n     [int]       : number of iterations for permutation ($numIter)\n";
 	print " -p                 : track mutation position relative to read start\n";
+	print " --outp [file]      : output mutation position summary\n";
 	print " --no-sparse-correct: no sparcity correction\n";
-	print " -FDR [float]       : threshold of FDR ($FDR)\n";
-	print " -mkr [float]       : threshold of m-over-k-ratio ($mkr)\n";
-	print " -c   [dir]         : cache dir ($cache)\n";
+	print " -FDR   [float]     : threshold of FDR ($FDR)\n";
+	print " -mkr   [float]     : threshold of m-over-k-ratio ($mkr)\n";
+	print " -c     [dir]       : cache dir ($cache)\n";
 	print " --keep-cache       : keep cache when the job is done\n";
 	print " -v                 : verbose\n";
 	exit (1);
@@ -71,6 +74,21 @@ my $verboseFlag = $verbose ? '-v' : '';
 my $bigFlag = $big ? '-big' :'';
 
 system ("mkdir $cache"); 
+
+
+print "clean mutations ...\n" if $verbose;
+my $cmd = "awk \'{if(\$3-\$2==$mutationSize) {print \$0}}\' $mutationBedFile > $cache/mutation.clean.bed";
+system ($cmd);
+
+$mutationBedFile = "$cache/mutation.clean.bed";
+
+$cmd = "wc -l $mutationBedFile";
+my $n = `$cmd`;
+$n=~/^(\d+)/;
+$n = $1;
+Carp::croak "no mutaton of size $mutationSize found\n" unless $n > 0;
+
+print "$n mutations of size $mutationSize found\n";
 
 my $mutationPositionFile = "$cache/mutation.pos.txt";
 if ($trackPosition)
@@ -115,22 +133,14 @@ if ($trackPosition)
 	$cmd = "paste $mutationBedFile $tmpFile | awk '{if(\$6 ==\"+\") {print \$5;} else {print \$9-\$8\-\$5-$mutationSize}}' > $mutationPositionFile";
 	#my $cmd = "awk '{if(\$6 ==\"+\") {print \$5;} else {print \$3-\$2-\$5-1}}' $mutationBedFile > $mutationPositionFile";
 	system ($cmd);
+
+	if ($mutationPosSummaryFile ne '')
+	{
+		$cmd = "cut -f 2 $mutationPositionFile | sort -n | uniq -c > $mutationPosSummaryFile";
+		$ret = system ($cmd);
+		print "CMD=$cmd failed: $?\n" if $ret != 0;
+	}
 }
-
-print "clean mutations ...\n" if $verbose;
-my $cmd = "awk \'{if(\$3-\$2==$mutationSize) {print \$0}}\' $mutationBedFile > $cache/mutation.clean.bed";
-system ($cmd);
-
-$mutationBedFile = "$cache/mutation.clean.bed";
-
-$cmd = "wc -l $mutationBedFile";
-my $n = `$cmd`;
-$n=~/^(\d+)/;
-$n = $1;
-
-Carp::croak "no mutaton of size $mutationSize found\n" unless $n > 0;
-
-print "$n mutations of size $mutationSize found\n";
 
 print "clustering mutation sites ...\n" if $verbose;
 my $mutationClusterFile = "$cache/mutation.cluster.bed";
@@ -141,7 +151,7 @@ system ($cmd);
 #
 print "counting the total tag number for each mutation site ...\n" if $verbose;
 my $mutationTagCountFile = "$cache/mutation.tagcount.bed";
-$cmd = "perl $cmdDir/tag2profile.pl -region $mutationClusterFile -ss -of bed $bigFlag $verboseFlag $tagBedFile $mutationTagCountFile";
+$cmd = "perl $cmdDir/tag2profile.pl -c $cache/tmp_mut_count -region $mutationClusterFile -ss -of bed $bigFlag $verboseFlag $tagBedFile $mutationTagCountFile";
 my $ret = system ($cmd);
 print "CMD=$cmd failed: $?\n" if $ret != 0;
 
@@ -233,7 +243,7 @@ for (my $i = 0; $i < $numIter; $i++)
 	print "counting the total tag number for each clustered mutation site in $randomMutationClusterFile ...\n" if $verbose;
 	my $randomMutationTagCountFile = "$cache/mutation.random.$i.tagcount.bed";
 	#$cmd = "perl ~/scripts/tag2profile.pl -region $randomMutationClusterFile -ss -of bed $verboseFlag $tagBedFile $randomMutationTagCountFile";
-	$cmd = "perl $cmdDir/tag2profile.pl -region $randomMutationClusterFile -ss -of bed $tagBedFile $randomMutationTagCountFile";
+	$cmd = "perl $cmdDir/tag2profile.pl -c $cache/tmp_mut_count_$i -region $randomMutationClusterFile -ss -of bed $tagBedFile $randomMutationTagCountFile";
 	
 	$cmd .= " -big" if $big;
 	$ret = system ($cmd);
