@@ -35,9 +35,9 @@ GetOptions (
 if (@ARGV != 2)
 {
 	print STDERR "parse alignment in SAM format to BED format (both tags and mutations)\n";
-	print STDERR "Usage: $prog [options] <in.sam> <out.bed>\n";
+	print STDERR "Usage: $prog [options] <in.sam> <tag.bed>\n";
 	print STDERR " <in.sam>  : gzip compressed input file with .gz extension is allowed\n";
-	print STDERR " <out.bed> : output bed file of tag alignment\n";
+	print STDERR " <tag.bed> : output bed file of tag alignment\n";
 	print STDERR " You can also use - to specify STDIN for input or STDOUT for output\n\n";
 	print STDERR "options:\n";
 	print STDERR " --mutation-file [string]: file name to save mutations\n";

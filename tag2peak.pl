@@ -20,7 +20,7 @@ my $minBlockSize = 2000000;
 my $separateStrand = 0;
 
 my $valleySeeking = 0;	#0 or 1
-my $valleyDepth = 0.5;	#between 0.5 and 1
+my $valleyDepth = 0.9;	#0.9 as default
 
 my $geneBedFile = "";
 my $useExpr = 0;
@@ -28,6 +28,7 @@ my $pvalueThreshold = 0.01;
 my $multiTestCorrection = 0;
 
 my $minPH = 2;
+my $maxPH = 5000;
 my $maxGap = -1; #no merge by default, default 25 recommended if merge
 
 my $outBoundaryBedFile = "";
@@ -50,6 +51,7 @@ GetOptions (
 	'use-expr'=>\$useExpr,
 	'multi-test'=>\$multiTestCorrection,
 	'minPH:i'=>\$minPH,
+	'maxPH:i'=>\$maxPH,
 	'gap:i'=>\$maxGap,
 	'out-boundary:s'=>\$outBoundaryBedFile,
 	'out-half-PH:s'=>\$outHalfPHBedFile,
@@ -75,10 +77,11 @@ if (@ARGV != 2)
 	print " --out-half-PH  [string]: output half peak height boundaries\n";
     print " --gene         [string]: gene bed file for scan statistics\n";
 	print " --use-expr             : use expression levels given in the score column in the gene bed file for normalization\n";
-	print " -p             [float] : threshold of pvalue to call peak ($pvalueThreshold)\n";    
-	print " --multi-test           : do bonforroni multiple test correction\n";
+	print " -p             [float] : threshold of p-value to call peak ($pvalueThreshold)\n";    
+	print " --multi-test           : do Bonferroni multiple test correction\n";
 	print " -minPH         [int]   : min peak height ($minPH)\n";
-    print " -gap           [int]   : merge cluster peaks closer than the gap ($maxGap, no merge if < 0)\n";
+    print " -maxPH         [int]   : max peak height ($maxPH)\n";
+	print " -gap           [int]   : merge cluster peaks closer than the gap ($maxGap, no merge if < 0)\n";
 	print " --prefix       [string]: prefix of peak id ($prefix)\n";
     print " -c             [dir]   : cache dir\n";
 	print " --keep-cache           : keep cache when the job done\n";
@@ -91,9 +94,15 @@ print "CMD=$prog ", join(" ", @ARGV0), "\n" if $verbose;
 my ($tagBedFile, $outBedFile) = @ARGV;
 
 #check parameters
+
+if ($geneBedFile ne '')
+{
+	Carp::croak "$geneBedFile does not exist\n" unless -f $geneBedFile;
+}
+
 if ($valleySeeking)
 {
-	Carp::croak "valley-depth must be >= 0.5\n" unless $valleyDepth >= 0.5;
+	Carp::croak "valley-depth must be >= 0.9\n" unless $valleyDepth >= 0.9;
 }
 else
 {
@@ -113,7 +122,6 @@ if ($minPH < 2)
 	warn "minPH must be >=2\n";
 	$minPH = 2;
 }
-
 
 my $cmdDir = dirname ($0);
 
@@ -231,7 +239,13 @@ my $n = `$cmd`;
 $n=~/^(\d+)/;
 $n = $1;
 
-Carp::croak "no peaks found\n" if $n == 0;
+
+if ($n == 0)
+{
+	Carp::croak "no peaks found\n";
+	system ("rm -rf $cache") unless $keepCache;
+	exit (0);
+}
 
 print "$n candidate peaks with PH>=$minPH detected\n" if $verbose;
 
@@ -412,6 +426,13 @@ if (-f $geneBedFile)
     	next unless $peakHeight > $expectedPeakHeight;#otherwise it cannot be significant
 
     	my $geneSize = $geneTagCountHash{$geneId}->{'size'};
+
+		#print "$i: $peakHeight, $expectedPeakHeight\n";
+		if ($peakHeight > $maxPH)
+		{
+			print "$i: peak height out of range: ", bedToLine ($peak), "\n" if $verbose;
+			next;
+		}
 
     	my $pvalue = exists $resultHash{$geneId}{$peakHeight} ? 
     		$resultHash{$geneId}{$peakHeight} : calcScanStatistic ($peakHeight, $expectedPeakHeight, $geneSize / $tagSize);
@@ -679,7 +700,7 @@ sub extractPeaksBlock
 			{
 				my $v = $tags->[$j];
 				next unless exists $v->{'minima'};
-				if ($v->{'score'} / $p1->{'score'} < $valleyHeight)
+				if ($v->{'score'} / $p1->{'score'} <= $valleyHeight)
 				{
 					$leftValleyFound = 1;
 					last;
@@ -698,7 +719,7 @@ sub extractPeaksBlock
 			{
 				my $v = $tags->[$j];
 				next unless exists $v->{'minima'};
-				if ($v->{'score'} / $p1->{'score'} < $valleyHeight)
+				if ($v->{'score'} / $p1->{'score'} <= $valleyHeight)
                 {
                     $rightValleyFound = 1;
                     last;
@@ -752,7 +773,7 @@ sub extractPeaksBlock
 		for (my $j = $p1->{'idx'} + 1; $j <= $right; $j++)
 		{
 			my $v = $tags->[$j];
-			if ($v->{'score'} / $p1->{'score'} < $valleyHeight)
+			if ($v->{'score'} / $p1->{'score'} <= 0.5)
             {
 				$rightHalfPHTag = $v unless $rightHalfPHTag;
 			}
