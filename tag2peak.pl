@@ -102,7 +102,7 @@ if ($geneBedFile ne '')
 
 if ($valleySeeking)
 {
-	Carp::croak "valley-depth must be >= 0.9\n" unless $valleyDepth >= 0.9;
+	Carp::croak "valley-depth must be between 0.5 and 1\n" unless $valleyDepth >= 0.5 && $valleyDepth <= 1;
 }
 else
 {
