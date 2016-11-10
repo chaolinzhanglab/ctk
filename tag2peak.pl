@@ -13,6 +13,7 @@ use ScanStatistics;
 use Data::Dumper;
 
 my $prog = basename ($0);
+my $cmdDir = dirname ($0);
 
 my $verbose = 0;
 my $big = 0;
@@ -22,13 +23,20 @@ my $separateStrand = 0;
 my $valleySeeking = 0;	#0 or 1
 my $valleyDepth = 0.9;	#0.9 as default
 
+#my $confFile = "";
+my $dbkey = "";
+
 my $geneBedFile = "";
 my $useExpr = 0;
 my $pvalueThreshold = 0.01;
 my $multiTestCorrection = 0;
 
 my $minPH = 2;
-my $maxPH = 5000;
+my $maxPH = -1;
+
+#calculation of scan statistics can be slow for very large peak height, and these might be spurious (e.g., in very abundant RNA) and one might filter them out
+#5000; -1= no filter by default
+
 my $maxGap = -1; #no merge by default, default 25 recommended if merge
 
 my $outBoundaryBedFile = "";
@@ -47,6 +55,8 @@ GetOptions (
 	'ss'=>\$separateStrand,
 	'valley-seeking'=>\$valleySeeking,
 	'valley-depth:f'=>\$valleyDepth,
+	#'test'=>\$doStatTest,
+	'dbkey:s'=>\$dbkey,
 	'gene:s'=>\$geneBedFile,
 	'use-expr'=>\$useExpr,
 	'multi-test'=>\$multiTestCorrection,
@@ -75,12 +85,13 @@ if (@ARGV != 2)
 	print " --valley-depth [float] : depth of valley if valley seeking ($valleyDepth)\n";
 	print " --out-boundary [string]: output cluster boundaries\n";
 	print " --out-half-PH  [string]: output half peak height boundaries\n";
-    print " --gene         [string]: gene bed file for scan statistics\n";
-	print " --use-expr             : use expression levels given in the score column in the gene bed file for normalization\n";
+    print " --dbkey        [string]: species to retreive default gene bed file (mm10|hg19)\n";
+	print " --gene         [string]: custom gene bed file for scan statistics (will override --dbkey)\n";
+	print " --use-expr             : use expression levels given in the score column in the custom gene bed file for normalization\n";
 	print " -p             [float] : threshold of p-value to call peak ($pvalueThreshold)\n";    
 	print " --multi-test           : do Bonferroni multiple test correction\n";
 	print " -minPH         [int]   : min peak height ($minPH)\n";
-    print " -maxPH         [int]   : max peak height ($maxPH)\n";
+    print " -maxPH         [int]   : max peak height ($maxPH, no filter if < 0)\n";
 	print " -gap           [int]   : merge cluster peaks closer than the gap ($maxGap, no merge if < 0)\n";
 	print " --prefix       [string]: prefix of peak id ($prefix)\n";
     print " -c             [dir]   : cache dir\n";
@@ -93,12 +104,19 @@ print "CMD=$prog ", join(" ", @ARGV0), "\n" if $verbose;
 
 my ($tagBedFile, $outBedFile) = @ARGV;
 
+
 #check parameters
 
-if ($geneBedFile ne '')
+if ($geneBedFile ne '' || $useExpr)
 {
 	Carp::croak "$geneBedFile does not exist\n" unless -f $geneBedFile;
 }
+
+if ($dbkey ne '')
+{
+	Carp::croak "dbkey must be mm10 or hg19\n" unless $dbkey eq 'mm10' || $dbkey eq 'hg19';
+}
+
 
 if ($valleySeeking)
 {
@@ -106,11 +124,26 @@ if ($valleySeeking)
 }
 else
 {
-	Carp::croak "must specify --gene or --valley-seeking\n" unless $geneBedFile ne '';
-	Carp::croak "gene Bed file $geneBedFile does not exist\n" unless -f $geneBedFile;
+	#if no valley seeking, must specify genic region and do statistical test
+	#also must do merging
+	Carp::croak "must specify --dbkey or --gene when --valley-seeking is not unabled\n" unless $geneBedFile ne '' || $dbkey ne '';
 	warn "peak merging is strongly recommended (e.g. --gap 25) without valley seeking\n" if $maxGap < 0;
 }
 
+if ($dbkey ne '')
+{
+	if ($geneBedFile eq '')
+	{
+		#get gene bed file
+		my $confFile = "$cmdDir/annotation.loc";
+		my $locationInfo = getLocationInfo ($confFile, $dbkey, "genic");
+		$geneBedFile = $locationInfo->{'genic'};
+		print "gene bed file=$geneBedFile\n" if $verbose;
+
+		Carp::croak "$geneBedFile does not exist\n" unless -f $geneBedFile;
+	}
+	#otherwise do nothing
+}
 
 if ($outBoundaryBedFile ne '' || $outHalfPHBedFile ne '')
 {
@@ -123,7 +156,6 @@ if ($minPH < 2)
 	$minPH = 2;
 }
 
-my $cmdDir = dirname ($0);
 
 my $bigFlag = $big ? "-big" : "";
 my $verboseFlag = $verbose ? "-v" : "";
@@ -428,7 +460,7 @@ if (-f $geneBedFile)
     	my $geneSize = $geneTagCountHash{$geneId}->{'size'};
 
 		#print "$i: $peakHeight, $expectedPeakHeight\n";
-		if ($peakHeight > $maxPH)
+		if ($maxPH > 0 && $peakHeight > $maxPH)
 		{
 			print "$i: peak height out of range: ", bedToLine ($peak), "\n" if $verbose;
 			next;
@@ -803,4 +835,37 @@ sub extractPeaksBlock
 	return \@peaks;
 }
 
+sub getLocationInfo
+{
+    my ($conf, $dbkey, $analysis) = @_;
+
+    my $fin;
+
+    open ($fin, "<$conf") || Carp::croak "cannot open file $conf\n";
+
+    my %ret;
+
+    while (my $line = <$fin>)
+    {
+        chomp $line;
+        next if $line =~/^\s*$/;
+        next if $line =~/^\#/;
+
+        my ($db, $ana, $path, $type) = split (/\s+/, $line);
+
+        $path = "$cmdDir/$path" unless $path=~/^\//;
+        #if a relative path is provided, we assume the annotation file is located in the same folder as the script
+        #fixed by CZ, 07/31/2016
+
+        $type = $ana unless $type;
+
+        if ($db eq $dbkey && $ana eq $analysis)
+        {
+            Carp::croak "$path does not exist\n" unless -f $path;
+            $ret{$type} = $path;
+        }
+    }
+    close ($fin);
+    return \%ret;
+}
 

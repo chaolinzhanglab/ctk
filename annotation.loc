@@ -17,6 +17,7 @@ hg19 region	annotation/genomes/hg19/annotation/refGene_knownGene.5utr.cluster.be
 hg19 region	annotation/genomes/hg19/annotation/refGene_knownGene.3utr.cluster.bed 3utr
 hg19 region	annotation/genomes/hg19/annotation/refGene_knownGene.cds.cluster.bed cds
 
+hg19 genic  annotation/genomes/hg19/annotation/refGene_knownGene.meta.6.bed
 
 #***mm10****
 
@@ -33,3 +34,6 @@ mm10 region	annotation/dbCASE/db_mm10/exons/mm10.exon.uniq.cluster.bed exon
 mm10 region	annotation/genomes/mm10/annotation/refGene_knownGene.5utr.cluster.bed 5utr
 mm10 region	annotation/genomes/mm10/annotation/refGene_knownGene.3utr.cluster.bed 3utr
 mm10 region	annotation/genomes/mm10/annotation/refGene_knownGene.cds.cluster.bed cds
+
+#for tag2peak
+mm10 genic	annotation/genomes/mm10/annotation/refGene_knownGene.meta.6.bed
