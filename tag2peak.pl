@@ -85,7 +85,7 @@ if (@ARGV != 2)
 	print " --valley-depth [float] : depth of valley if valley seeking ($valleyDepth)\n";
 	print " --out-boundary [string]: output cluster boundaries\n";
 	print " --out-half-PH  [string]: output half peak height boundaries\n";
-    print " --dbkey        [string]: species to retreive default gene bed file (mm10|hg19)\n";
+    print " --dbkey        [string]: species to retrieve the default gene bed file (mm10|hg19)\n";
 	print " --gene         [string]: custom gene bed file for scan statistics (will override --dbkey)\n";
 	print " --use-expr             : use expression levels given in the score column in the custom gene bed file for normalization\n";
 	print " -p             [float] : threshold of p-value to call peak ($pvalueThreshold)\n";    
