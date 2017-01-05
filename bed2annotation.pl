@@ -96,13 +96,23 @@ $analyses{'region'} = 1 if $get_region;
 $analyses{'custom'} = 1 if $get_custom ne '';
 
 
+if ($confFile ne '')
+{
+	Carp::croak "$confFile does not exist\n" unless -f $confFile;
+}
+else
+{
+	#take the default, assuming it is located in the same directory as the script
+	$confFile = "$cmdDir/annotation.loc";
+}
+
+
 my $customBedFile = $get_custom;
 
 if ($customBedFile ne '')
 {
 	Carp::croak "cannot file $customBedFile" unless -f $customBedFile;
 }
-
 
 my ($inBedFile, $outFile) = @ARGV;
 
@@ -397,13 +407,14 @@ foreach my $analysis (sort keys %analyses)
 				print $fout_summary join ("\t", $g->[1], $g->[0], sprintf ("%.1f", $g->[0] / $totalN * 100)), "\n";
 			}
 	
+			#print "genicN=$genicN, genic_extN=$genic_extN\n";
 
 			my $extN = $genic_extN - $genicN;
-			$upstream_intergenicN = 0;
-			$upstream_intergenicN = int ($upstream_intergenicN / ($upstream_intergenicN+ $downstream_intergenicN) * $extN + 0.5) 
+			#$upstream_intergenicN = 0;
+			my $upstream_intergenicN_correct = int ($upstream_intergenicN / ($upstream_intergenicN+ $downstream_intergenicN) * $extN + 0.5) 
 			if $upstream_intergenicN+ $downstream_intergenicN > 0;
 			
-			$downstream_intergenicN = $extN - $upstream_intergenicN;
+			my $downstream_intergenicN_correct = $extN - $upstream_intergenicN_correct;
 
 
 			print $fout_summary "\nPercentage of intervals in each region (adjusted):\n";
@@ -411,9 +422,9 @@ foreach my $analysis (sort keys %analyses)
 			print $fout_summary join ("\t", "Region", "%"), "\n";
 			print $fout_summary join ("\t", "CDS exon", sprintf ("%.1f", $exon_cdsN * $exonicN / ($exon_5utrN + $exon_3utrN + $exon_cdsN) / $totalN * 100)), "\n";
 			print $fout_summary join ("\t", "5' UTR exon", sprintf ("%.1f", $exon_5utrN * $exonicN / ($exon_5utrN + $exon_3utrN + $exon_cdsN) / $totalN * 100)), "\n";
-			print $fout_summary join ("\t", "Upstream 10K", sprintf ("%.1f", $upstream_intergenicN / $totalN * 100)), "\n";
+			print $fout_summary join ("\t", "Upstream 10K", sprintf ("%.1f", $upstream_intergenicN_correct / $totalN * 100)), "\n";
 			print $fout_summary join ("\t", "3' UTR exon", sprintf ("%.1f", $exon_3utrN * $exonicN / ($exon_5utrN + $exon_3utrN + $exon_cdsN) / $totalN * 100)), "\n";
-			print $fout_summary join ("\t", "Downstream 10K", sprintf ("%.1f", $downstream_intergenicN / $totalN * 100)), "\n";
+			print $fout_summary join ("\t", "Downstream 10K", sprintf ("%.1f", $downstream_intergenicN_correct / $totalN * 100)), "\n";
 			print $fout_summary join ("\t", "Intron", sprintf ("%.1f", $intronicN /  $totalN * 100)), "\n";
 			print $fout_summary join ("\t", "Deep intergenic", sprintf ("%.1f", $deep_intergenicN /  $totalN * 100)), "\n";
 		}
@@ -504,6 +515,11 @@ sub getLocationInfo
 		next if $line =~/^\#/;
 
 		my ($db, $ana, $path, $type) = split (/\s+/, $line);
+
+		$path = "$cmdDir/$path" unless $path=~/^\//;
+		#if a relative path is provided, we assume the annotation file is located in the same folder as the script
+		#fixed by CZ, 07/31/2016
+
 		$type = $ana unless $type;
 
 		if ($db eq $dbkey && $ana eq $analysis)

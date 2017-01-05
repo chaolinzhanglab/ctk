@@ -21,6 +21,7 @@ if (@ARGV != 2)
 {
 	print "collapse exact duplicate sequences\n";
 	print "Usage: $prog [options] <in.fq> <out.fq>\n";
+	print " use - for stdout\n";
 	print "options:\n";
 	print " --tmp-dir   [string]: temp dir ($tmpDir)\n";
 	print " -v                  : verbose\n";
@@ -68,6 +69,8 @@ else
 }
 
 my $cmd = "paste $tmpIDFile $tmpQualFile $tmpSeqFile| sort -k 3 | uniq -f 2 -c | awk '{print \$2\"#\"\$1\"\\n\"\$4\"\\n+\\n\"\$3}' > $outFastqFile";
+$cmd = "paste $tmpIDFile $tmpQualFile $tmpSeqFile| sort -k 3 | uniq -f 2 -c | awk '{print \$2\"#\"\$1\"\\n\"\$4\"\\n+\\n\"\$3}'" if $outFastqFile eq '-';
+
 print $cmd, "\n" if $verbose;
 system ($cmd);
 system ("rm -rf $tmpDir");

@@ -46,7 +46,7 @@ GetOptions ("n:i"=>\$numIter,
 if (@ARGV != 3)
 {
 	print "identify significant CIMS\n";
-	print "Usage: $prog [options] <tag.uniq.bed> <mutation.bed> <mutation.txt>\n";
+	print "Usage: $prog [options] <tag.bed> <mutation.bed> <out.txt>\n";
 	print "Note: the 5th column of <mutation.bed> must have the position of the mutation relative to the chromStart of the tag\n";
 	print " -big               : big file\n";
 	print " -w     [int]       : mutation size ($mutationSize)\n";

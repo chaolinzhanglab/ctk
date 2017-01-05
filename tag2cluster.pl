@@ -8,12 +8,14 @@ use Data::Dumper;
 use Getopt::Long;
 use Carp;
 
+use Common;
 use MyConfig;
 use Bed;
 
 my $prog = basename($0);
 
 my $bigFile = 0;	#if yes, we need to use cache
+my $minBlockSize = 2000000;
 
 my $sameStrand = 0;	#cluster regions are in the same strand for a match
 my $maxGap = 0; #the max gap to be considered as an overlap
@@ -37,6 +39,7 @@ my @ARGV0 = @ARGV;
 
 GetOptions (
 			'big'=>\$bigFile,
+			'minBlockSize:i'=>\$minBlockSize,
 			's|same-strand'=>\$sameStrand,
 			'weight'=>\$weight,
 			'weight-in-name'=>\$weightInName,
@@ -59,9 +62,10 @@ if (@ARGV != 2)
 	
 	print "Usage: $prog [options] <in.bed> <out.bed>\n";
 	print " <in.bed>         : gzip compressed file with .gz extension is acceptable\n";
-	print "                    use \"-\" for stdin\n";
+	print "                    use \"-\" for stdin or stdout\n";
 	print "options\n";
 	print " -big             : set when the input file is big\n";
+	print " -minBlockSize  [int]: minimim number of lines to read in each block for a big file ($minBlockSize)\n";
 	print " -s               : same strand required [off]\n";
 	print " -weight          : consider the weight of each tag\n";
 	print " --weight-in-name : find weight in name\n";
@@ -101,10 +105,10 @@ system ("mkdir $cache");
 
 my %tagCount;
 
-print "reading tags from $inBedFile ...\n" if $verbose;
+print STDERR "reading tags from $inBedFile ...\n" if $verbose;
 if ($bigFile)
 {
-	my $ret = splitBedFileByChrom ($inBedFile, $cache, $verbose);
+	my $ret = splitBedFileByChrom ($inBedFile, $cache, v=>$verbose, "sort"=>1);
 	%tagCount = %$ret;
 }
 else
@@ -117,7 +121,7 @@ else
 	}
 }
 
-print "get tag count broken down into chromosomes ...\n" if $verbose;
+print STDERR "get tag count broken down into chromosomes ...\n" if $verbose;
 
 foreach my $chrom (sort keys %tagCount)
 {
@@ -125,11 +129,11 @@ foreach my $chrom (sort keys %tagCount)
 	my $n = $tagCount{$chrom};
 	$n = ref($n) eq 'HASH' ? $n = $n->{'n'} : @$n;
 
-	print "$chrom : $n tags\n" if $verbose;
+	print STDERR "$chrom : $n tags\n" if $verbose;
 }
 
 
-print "\n\nclustering tags ...\n" if $verbose;
+print STDERR "\n\nclustering tags ...\n" if $verbose;
 
 my @strands = ('b');
 @strands = qw(+ -) if $sameStrand;
@@ -148,7 +152,7 @@ else
 foreach my $s (@strands)
 {
 	
-	print "processing strand $s ...\n" if $verbose;
+	print STDERR "processing strand $s ...\n" if $verbose;
 	
 	if ($outputFormat eq 'wig')
 	{
@@ -160,161 +164,180 @@ foreach my $s (@strands)
 		my $tags;
 		if ($bigFile)
 		{
+			my $n = $tagCount{$chrom}->{'n'};
+			print STDERR "$n tags on chromosome $chrom\n" if $verbose;
+
 			my $tmpFile = $tagCount{$chrom}->{'f'};
-			print "loading tags on chromsome $chrom from $tmpFile...\n" if $verbose;
-			$tags = readBedFile ($tmpFile, $verbose);
+			print STDERR "loading tags on chromsome $chrom from $tmpFile...\n" if $verbose;
+			
+			my $fin;
+			open ($fin, "<$tmpFile") || Carp::croak "cannot open file $tmpFile to read\n";
+
+            my $startIdx = 0; #start index of clusters in this block
+			my $blockIdx = 0;
+            while (my $tags = readNextBedBlock ($fin, max (1, $maxGap + 1), 0, minBlockSize=> $minBlockSize))
+			{
+				my $n = @$tags;
+				print STDERR "$n tags loaded in $chrom block $blockIdx\n" if $verbose;
+				print STDERR "clustering $chrom block $blockIdx...\n" if $verbose;
+            	$startIdx = doCluster ($tags, $s, $startIdx, $fout);
+				$blockIdx++;
+			}
 		}
 		else
 		{
 			$tags = $tagCount{$chrom};
-		}
-
-		my $n = @$tags;
-
-		if ($weight && $weightInName)
-		{
-			foreach my $t (@$tags)
-			{
-				my @cols = split (/\#/, $t->{'name'});
-				pop @cols if $randomLinker;
-				$t->{'score'} = pop @cols;
-			}
-		}
-
-		print "$n tags loaded on chromosome $chrom\n" if $verbose;
-	
-		Carp::croak "No strand specified\n" if $sameStrand && (not exists $tags->[0]->{"strand"});
-
-		print "clustering $chrom ...\n" if $verbose;
-		#my @tags4cluster;
-		#my $i = 0;
-		#foreach my $t (@$tags)
-		#{
-		#	next if $s ne 'b' && $t->{"strand"} ne $s;
-		#	$t->{"idx"} = $i++;
-		#	push @tags4cluster, $t;
-		#}
-		#
-		#my $clusters = clusterRegions (\@tags4cluster, $s);
-
-		my $clusters;
-	   
-		if ($collapseMode && $randomLinker)
-		{
-			#because we need to run clustering again in cluster mode, using only tags with the same linker
-			#definition clusterRegions ($regionsOnChrom, $strand, $maxGap, $overlapFraction, $collapse); 
+			my $n = @$tags;
+			print STDERR "$n tags loaded on chromosome $chrom\n" if $verbose;
 			
-			$clusters = clusterRegions ($tags, $s, 0, 0, 0);
+			print STDERR "clustering $chrom ...\n" if $verbose;
+			doCluster ($tags, $s, 0, $fout);
 		}
-		else
-		{
-			$clusters = clusterRegions ($tags, $s, $maxGap, $overlapFraction, $collapseMode);
-		}
-		my $nc = @$clusters;
-		print "\n\n$nc clusters found\n" if $debug;
+	}
+}
 
-		my $iter = 0;
-		foreach my $clust (@$clusters)
-		{
-			#my @tagsInClust = @tags4cluster[@$clust];
-			my @tagsInClust = @$tags[@$clust];
-			my $score = $weight ? 0 : @tagsInClust;
-
-			my $chromStart = 1e9;
-			my $chromEnd = -1;
-			foreach my $t (@tagsInClust)
-			{
-				if ($weight)
-				{
-					Carp::croak "not score found in tag:", Dumper ($t), "\n" unless exists $t->{"score"};
-					$score += $t->{"score"};
-				}
-				$chromStart = $t->{"chromStart"} if $t->{"chromStart"} < $chromStart;
-				$chromEnd = $t->{"chromEnd"} if $t->{"chromEnd"} > $chromEnd;
-			}
-
-			#my $score = @tagsInClust;
-
-			
-			my $name = $chrom;
-		    $name .= "_f_c$iter" if $s eq '+';
-			$name .= "_r_c$iter" if $s eq '-';
-			
-			$name .= "_c$iter" if $s eq 'b';
-		
-			if ($outputFormat eq 'wig')
-			{
-				print $fout join ("\t", $chrom, $chromStart, $chromEnd + 1, $score), "\n";
-				next;
-			}
-			
-			if ($collapseMode)
-			{
-				@tagsInClust = sort {($b->{"chromEnd"} - $b->{"chromStart"}) <=> ($a->{"chromEnd"} - $a->{"chromStart"})} @tagsInClust;
-
-				if ($randomLinker)
-				{
-					my %tagsInClust;
-					#divide according to linker sequence
-					foreach my $tag (@tagsInClust)
-					{
-						my $tagName = $tag->{"name"};
-						my @cols = split (/\#/, $tagName);
-						my $linker = pop @cols;
-						next if $linker =~/[^ACGT]/i;
-
-						push @{$tagsInClust{$linker}}, $tag;
-					}
-
-
-					foreach my $linker (keys %tagsInClust)
-					{
-						my $tagsInClustWithSameLinker = $tagsInClust{$linker};
-
-						#cluster again for tags with the same linker in the cluster
-						my $clusters2 = clusterRegions ($tagsInClustWithSameLinker, $s, $maxGap, $overlapFraction, $collapseMode);
-
-						foreach my $clust2 (@$clusters2)
-						{
-							my @tagsInClust2 = @$tagsInClustWithSameLinker[@$clust2];
-							my $score = $weight ? 0 : @tagsInClust2;
-
-							foreach my $t (@tagsInClust2)
-							{
-								if ($weight)
-								{
-									Carp::croak "not score found in tag:", Dumper ($t), "\n" unless exists $t->{"score"};
-									$score += $t->{"score"};
-								}
-							}
-							$tagsInClust2[0]->{"score"} = $score unless $keepScore;
-							print $fout bedToLine ($tagsInClust2[0]), "\n";
-						}
-					}
-				}
-				else
-				{
-					$tagsInClust[0]->{"score"} = $score unless $keepScore;
-					print $fout bedToLine ($tagsInClust[0]), "\n";
-				}
-			}	
-			else
-			{
-				if ($s ne 'b')
-				{
-					print $fout join ("\t", $chrom, $chromStart, $chromEnd + 1, $name, $score, $s), "\n";
-				}
-				else
-				{
-					print $fout join ("\t", $chrom, $chromStart, $chromEnd + 1, $name, $score), "\n";
-				}
-			}
-			$iter++;	
-		} #cluster
-	}#chrom
-}#strand
 close ($fout);
 close ($fout) if $outBedFile ne '-';
-
 system ("rm -rf $cache");
+
+
+sub doCluster
+{
+	my ($tags, $strand, $startIdx, $fout) = @_;
+
+	return if @$tags < 1;
+
+	my $chrom = $tags->[0]->{'chrom'};
+
+	if ($weight && $weightInName)
+	{
+		foreach my $t (@$tags)
+		{
+			my @cols = split (/\#/, $t->{'name'});
+			pop @cols if $randomLinker;
+			$t->{'score'} = pop @cols;
+		}
+	}
+	
+	my $s = $strand;
+
+	#my $n = @$tags;
+	my $clusters;
+	   
+	if ($collapseMode && $randomLinker)
+	{
+		#because we need to run clustering again in cluster mode, using only tags with the same linker
+		#definition clusterRegions ($regionsOnChrom, $strand, $maxGap, $overlapFraction, $collapse); 
+			
+		$clusters = clusterRegions ($tags, $s, 0, 0, 0);
+	}
+	else
+	{
+		$clusters = clusterRegions ($tags, $s, $maxGap, $overlapFraction, $collapseMode);
+	}
+	
+	my $nc = @$clusters;
+	print STDERR "\n\n$nc clusters found\n" if $debug;
+
+	my $iter = $startIdx;
+	foreach my $clust (@$clusters)
+	{
+		#my @tagsInClust = @tags4cluster[@$clust];
+		my @tagsInClust = @$tags[@$clust];
+		my $score = $weight ? 0 : @tagsInClust;
+
+		my $chromStart = 1e9;
+		my $chromEnd = -1;
+		foreach my $t (@tagsInClust)
+		{
+			if ($weight)
+			{
+				Carp::croak "not score found in tag:", Dumper ($t), "\n" unless exists $t->{"score"};
+				$score += $t->{"score"};
+			}
+			$chromStart = $t->{"chromStart"} if $t->{"chromStart"} < $chromStart;
+			$chromEnd = $t->{"chromEnd"} if $t->{"chromEnd"} > $chromEnd;
+		}
+
+		#my $score = @tagsInClust;
+
+			
+		my $name = $chrom;
+	    $name .= "_f_c$iter" if $s eq '+';
+		$name .= "_r_c$iter" if $s eq '-';
+			
+		$name .= "_c$iter" if $s eq 'b';
+		
+		if ($outputFormat eq 'wig')
+		{
+			print $fout join ("\t", $chrom, $chromStart, $chromEnd + 1, $score), "\n";
+			next;
+		}
+			
+		if ($collapseMode)
+		{
+			@tagsInClust = sort {($b->{"chromEnd"} - $b->{"chromStart"}) <=> ($a->{"chromEnd"} - $a->{"chromStart"})} @tagsInClust;
+
+			if ($randomLinker)
+			{
+				my %tagsInClust;
+				#divide according to linker sequence
+				foreach my $tag (@tagsInClust)
+				{
+					my $tagName = $tag->{"name"};
+					my @cols = split (/\#/, $tagName);
+					my $linker = pop @cols;
+					next if $linker =~/[^ACGT]/i;
+
+					push @{$tagsInClust{$linker}}, $tag;
+				}
+
+
+				foreach my $linker (keys %tagsInClust)
+				{
+					my $tagsInClustWithSameLinker = $tagsInClust{$linker};
+
+					#cluster again for tags with the same linker in the cluster
+					my $clusters2 = clusterRegions ($tagsInClustWithSameLinker, $s, $maxGap, $overlapFraction, $collapseMode);
+
+					foreach my $clust2 (@$clusters2)
+					{
+						my @tagsInClust2 = @$tagsInClustWithSameLinker[@$clust2];
+						my $score = $weight ? 0 : @tagsInClust2;
+
+						foreach my $t (@tagsInClust2)
+						{
+							if ($weight)
+							{
+								Carp::croak "not score found in tag:", Dumper ($t), "\n" unless exists $t->{"score"};
+								$score += $t->{"score"};
+							}
+						}
+						$tagsInClust2[0]->{"score"} = $score unless $keepScore;
+						print $fout bedToLine ($tagsInClust2[0]), "\n";
+					}
+				}
+			}
+			else
+			{
+				$tagsInClust[0]->{"score"} = $score unless $keepScore;
+				print $fout bedToLine ($tagsInClust[0]), "\n";
+			}
+		}	
+		else
+		{
+			if ($s ne 'b')
+			{
+				print $fout join ("\t", $chrom, $chromStart, $chromEnd + 1, $name, $score, $s), "\n";
+			}
+			else
+			{
+				print $fout join ("\t", $chrom, $chromStart, $chromEnd + 1, $name, $score), "\n";
+			}
+		}
+		$iter++;	
+	} #cluster
+	return $iter;
+}
+
 

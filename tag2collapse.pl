@@ -7,6 +7,7 @@ use File::Basename;
 use Data::Dumper;
 use Getopt::Long;
 use Carp;
+use POSIX;
 
 use MyConfig;
 use Bed;
@@ -73,6 +74,7 @@ if (@ARGV != 2)
 	print "collapse tags according to the start position\n";
 	
 	print "Usage: $prog [options] <in.bed> <out.bed>\n";
+	print " <in.bed> : gz file acceptable\n";
 	print "[Input options]\n";
 	print " -big                        : set when the input file is big\n";
 	print " -weight                     : consider the weight of each tag\n";
@@ -523,7 +525,7 @@ sub mixtureEM
 
 	my @linker = keys %$tags;
 	my $debugOld = $debug;
-	$debug = 1 if @linker > 1000; #turn on the debug flag for more output when there are a lot of tags and thus it is very slow
+	$debug = 1 if @linker > $maxN; #turn on the debug flag for more output when there are a lot of tags and thus it is very slow
 	
 	Carp::croak "no tags exist for EM algorithm\n" unless @linker > 0;
 
@@ -726,7 +728,7 @@ sub mixtureEMSparse
 
 	my @linker = keys %$tags;
 	my $debugOld = $debug;
-	$debug = 1 if @linker >= 1000; #turn on the debug flag for more output when there are a lot of tags and thus it is very slow
+	$debug = 1 if @linker > $maxN; #turn on the debug flag for more output when there are a lot of tags and thus it is very slow
 	
 	Carp::croak "no tags exist for EM algorithm\n" unless @linker > 0;
 
@@ -748,11 +750,15 @@ sub mixtureEMSparse
 
 	print "initializing EM ...\n" if $debug;
 	print scalar (@linker), " observations:\n" if $debug;
+	
+	my $maxCopy = 0; #the barcode with the max copy number
 	for (my $k = 0; $k < @linker; $k++)
 	{
 		my $linker = $linker[$k];
 		$alpha[$k] = $tags->{$linker}->{"score"};
 		$N += $alpha[$k];
+		$maxCopy = $alpha[$k] if $maxCopy < $alpha[$k];
+
 		print "$k: ", $linker, " [", $tags->{$linker}->{"score"}, "]\n" if $debug;
 	}
 	
@@ -777,15 +783,32 @@ sub mixtureEMSparse
 	my @alphaPost;	#posterior probability of each obs belonging to a component
 	my @dist; #distance (number of mismatches) between linkers
     
+	my $maxDist = 3;
+
+	#see if we can use smaller maxDist to save time, change in 04/23/2016
+	if (@linker > 2000)
+	{
+		#too low and too much memory with larger maxDist 
+		$maxDist = 1;
+	}
+	elsif (@linker > $maxN)
+	{
+		$maxDist = ceil(log($maxCopy)/log(1/$e));
+		$maxDist = 3 if $maxDist > 3;
+		#$maxDist = 2 if $maxDist < 2;
+	}
+	print "e=$e, maxCopy=$maxCopy, maxDist = $maxDist\n" if $debug;
+
 	for (my $i = 0; $i < @linker; $i++)
 	{
         $dist[$i]{$i} = 0;
         for (my $j = $i+1; $j < @linker; $j++)
         {
-			my $mc = countMismatchBase ($linkerBase[$i], $linkerBase[$j]);
-			if ($mc <= 3)
+			my $mc = countMismatchBase ($linkerBase[$i], $linkerBase[$j], $maxDist+1);
+			#we count at most $maxDist+1 differences to save time
+			if ($mc <= $maxDist)
 			{
-				#we assume at most 3 mismaches can occur
+				#we assume at most $maxDist mismaches can occur
             	$dist[$i]{$j} = $mc;
             	$dist[$j]{$i} = $dist[$i]{$j};
 			}
@@ -940,7 +963,11 @@ sub countSeqError
 			$copyNum = pop @cols;
 		}
 		$E += $mismatch * $copyNum;
-		$NL += ($t->{'chromEnd'} - $t->{'chromStart'} + 1) * $copyNum;
+
+		#update on Feb 3 2016 to accommdate exon junction reads
+		my $s = $t->{'chromEnd'} - $t->{'chromStart'} + 1;
+		$s = sum($t->{'blockSizes'}) if exists $t->{'blockSizes'};
+		$NL += $s * $copyNum;
 	}
 	return {E=>$E, NL=>$NL};
 }

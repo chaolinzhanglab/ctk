@@ -33,6 +33,7 @@ my $multiTestCorrection = 0;
 
 my $minPH = 2;
 my $maxPH = -1;
+my $skipOutofRangePeaks = 0; #by default, peaks with PH> maxPH will be labeled with p=nd, but kept. This option is provided to reproduce results from a previous version
 
 #calculation of scan statistics can be slow for very large peak height, and these might be spurious (e.g., in very abundant RNA) and one might filter them out
 #5000; -1= no filter by default
@@ -62,6 +63,7 @@ GetOptions (
 	'multi-test'=>\$multiTestCorrection,
 	'minPH:i'=>\$minPH,
 	'maxPH:i'=>\$maxPH,
+	'skip-out-of-range-peaks'=>\$skipOutofRangePeaks,
 	'gap:i'=>\$maxGap,
 	'out-boundary:s'=>\$outBoundaryBedFile,
 	'out-half-PH:s'=>\$outHalfPHBedFile,
@@ -75,7 +77,7 @@ if (@ARGV != 2)
 {
     print "detecting peaks from CLIP data\n";
     print "Usage: $prog [options] <tag.bed> <peak.bed>\n";
-    print " <tag.bed> : BED file of unique CLIP tags, input\n";
+    print " <tag.bed> : BED file of unique CLIP tags, input\n"; #, use - for stdin\n";
 	print " <peak.bed>: BED file of called peaks, output\n";
 	print "Options:\n";
 	#print " -e          : expression values indicated in the gene bed file\n";
@@ -91,7 +93,8 @@ if (@ARGV != 2)
 	print " -p             [float] : threshold of p-value to call peak ($pvalueThreshold)\n";    
 	print " --multi-test           : do Bonferroni multiple test correction\n";
 	print " -minPH         [int]   : min peak height ($minPH)\n";
-    print " -maxPH         [int]   : max peak height ($maxPH, no filter if < 0)\n";
+    print " -maxPH         [int]   : max peak height to calculate p-value($maxPH, no limit if < 0)\n";
+	print " --skip-out-of-range-peaks: skip peaks with PH > maxPH\n";
 	print " -gap           [int]   : merge cluster peaks closer than the gap ($maxGap, no merge if < 0)\n";
 	print " --prefix       [string]: prefix of peak id ($prefix)\n";
     print " -c             [dir]   : cache dir\n";
@@ -287,6 +290,7 @@ if (-f $geneBedFile)
 {
 	print "estimating average tag size ...\n" if $verbose;
 	my $tagSize =  `awk 'BEGIN{s=0;n=0;} {s=s+\$3-\$2; n=n+1} END {print s/n}' $tagBedFile`;
+	
 	chomp $tagSize;
 	print "average tag size = $tagSize\n" if $verbose;
 
@@ -460,22 +464,36 @@ if (-f $geneBedFile)
     	my $geneSize = $geneTagCountHash{$geneId}->{'size'};
 
 		#print "$i: $peakHeight, $expectedPeakHeight\n";
-		if ($maxPH > 0 && $peakHeight > $maxPH)
+		if ($peakHeight >= 5000)
 		{
-			print "$i: peak height out of range: ", bedToLine ($peak), "\n" if $verbose;
-			next;
+			#print a warning
+			print "$i: peak height > 5000: ", bedToLine ($peak), "\n";
 		}
 
-    	my $pvalue = exists $resultHash{$geneId}{$peakHeight} ? 
-    		$resultHash{$geneId}{$peakHeight} : calcScanStatistic ($peakHeight, $expectedPeakHeight, $geneSize / $tagSize);
 
-    	$resultHash{$geneId}{$peakHeight} = $pvalue unless exists $resultHash{$geneId}{$peakHeight};
+		my $pvalue;
 
-    	$pvalue *= $effectiveGeneNum if $multiTestCorrection;
-    	$pvalue = 1e-100 if $pvalue == 0;
+		if ($maxPH > 0 && $peakHeight > $maxPH)
+		{
+			#peak height too large to evaluate scan statistics. flagged by nd in pvalue
+			print "$i: peak height out of range: ", bedToLine ($peak), "\n" if $verbose;
+			$pvalue = "nd";
+			next if $skipOutofRangePeaks;
+		}
+		else
+		{
+    		$pvalue = exists $resultHash{$geneId}{$peakHeight} ? 
+    			$resultHash{$geneId}{$peakHeight} : calcScanStatistic ($peakHeight, $expectedPeakHeight, $geneSize / $tagSize);
 
+    		$resultHash{$geneId}{$peakHeight} = $pvalue unless exists $resultHash{$geneId}{$peakHeight};
+
+    		$pvalue *= $effectiveGeneNum if $multiTestCorrection;
+    		$pvalue = 1e-100 if $pvalue == 0;
+			$pvalue = sprintf ("%.2e", $pvalue);
+		}
+		
     	$peak->{'name'} = $peakId . "[gene=$geneId][PH=$peakHeight][PH0=" . 
-    		sprintf ("%.2f", $expectedPeakHeight) . "][P=" .sprintf ("%.2e", $pvalue) . "]";
+    		sprintf ("%.2f", $expectedPeakHeight) . "][P=$pvalue]";
 	
 		$peak->{'name'} .= "#" . join("#", $leftBoundary, $rightBoundary, $leftHalfPH, $rightHalfPH) if $valleySeeking;
     	$peak->{'score'} = $peakHeight; #-log ($pvalue) / log(10);

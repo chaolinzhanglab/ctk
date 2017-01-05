@@ -50,7 +50,8 @@ my $i = 0;
 while ($line = <$fin>)
 {
 	chomp $line;
-	
+	next if $line =~/^\s*$/;
+
 #	if ($line =~/^(.*?)\t/)
 #	{
 #		$line = $1;
