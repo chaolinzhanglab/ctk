@@ -269,7 +269,7 @@ else
 }
 
 
-$cmd = "wc -l $tmpPeakBedFile";
+$cmd = "wc -l $tmpPeakBedFile | awk '{print \$1}'";
 my $n = `$cmd`;
 $n=~/^(\d+)/;
 $n = $1;
@@ -402,7 +402,7 @@ if (-f $geneBedFile)
 	}
 #close ($fout);
 
-#my $effectiveGeneNum = `awk '{if(\$3>0) {print \$0}}' $geneTagCountFile | wc -l`;
+#my $effectiveGeneNum = `awk '{if(\$3>0) {print \$0}}' $geneTagCountFile | wc -l | awk '{print \$1}'`;
 #$effectiveGeneNum =~/\s*(\d+)\s*/;
 #$effectiveGeneNum = $1;
 

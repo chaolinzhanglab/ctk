@@ -82,7 +82,7 @@ system ($cmd);
 
 $mutationBedFile = "$cache/mutation.clean.bed";
 
-$cmd = "wc -l $mutationBedFile";
+$cmd = "wc -l $mutationBedFile | awk '{print \$1}'";
 my $n = `$cmd`;
 $n=~/^(\d+)/;
 $n = $1;

@@ -153,7 +153,7 @@ system ($cmd);
 
 #no header now
 $inBedFile = $inBedFileTmp;
-my $totalN = `wc -l $inBedFile | cut -d \" \" -f 1`; chomp $totalN;
+my $totalN = `wc -l $inBedFile | awk '{print \$1}'`; chomp $totalN;
 
 my $fout_summary;
 open ($fout_summary, ">$summaryFile") if $summaryFile ne '';
@@ -193,7 +193,7 @@ foreach my $analysis (sort keys %analyses)
 
 		if (-f $summaryFile)
 		{
-			my $geneN = `awk '{if(NF>1) {print \$0}}' $tmpOutFile | wc -l`; chomp $geneN;
+			my $geneN = `awk '{if(NF>1) {print \$0}}' $tmpOutFile | wc -l | awk '{print \$1}'`; chomp $geneN;
 			#Carp::croak"geneN = $geneN\n";
 
 			print $fout_summary join("\t", "Region", "No.", "%"), "\n";
@@ -209,7 +209,7 @@ foreach my $analysis (sort keys %analyses)
 		bed2annot ($inBedFile, $rmskBedFile, $tmpOutFile, "max_overlap", $analysis, $cache, $ssFlag, $bigFlag, $verboseFlag, $keepCacheFlag);
 		if (-f $summaryFile)
 		{
-			my $rmskN = `awk '{if(NF>1) {print \$0}}' $tmpOutFile | wc -l`; chomp $rmskN;
+			my $rmskN = `awk '{if(NF>1) {print \$0}}' $tmpOutFile | wc -l | awk '{print \$1}'`; chomp $rmskN;
 			print $fout_summary join("\t", "Region", "No.", "%"), "\n";
 			print $fout_summary join ("\t", "Intervals overlapping repeat masked region", $rmskN, sprintf ("%.1f", $rmskN / $totalN * 100)), "\n";
 			print $fout_summary join ("\t", "Other", $totalN - $rmskN, sprintf ("%.1f", 100 - $rmskN / $totalN * 100)), "\n";
@@ -228,7 +228,7 @@ foreach my $analysis (sort keys %analyses)
 		if (-f $summaryFile)
 		{
 			my $featureName = $analysis eq 'custom' ? $customName : $analysis;
-			my $featureN = `awk '{if(NF>0) {print \$0}}' $tmpOutFile | wc -l`; chomp $featureN;
+			my $featureN = `awk '{if(NF>0) {print \$0}}' $tmpOutFile | wc -l | awk '{print \$1}'`; chomp $featureN;
 			print $fout_summary join("\t", "Region", "No.", "%"), "\n";
 			print $fout_summary join ("\t", "Intervals overlapping $featureName", $featureN, sprintf ("%.1f", $featureN / $totalN * 100)), "\n";
 			print $fout_summary join ("\t", "Other", $totalN - $featureN, sprintf ("%.1f", 100 - $featureN / $totalN * 100)), "\n";
@@ -373,17 +373,17 @@ foreach my $analysis (sort keys %analyses)
 		
 		if (-f $summaryFile)
 		{
-			#my $totalN = `wc -l $inBedFile | cut -d \" \" -f 1`; chomp $totalN;
-			my $genicN = `cat $bed_vs_genic_idFile $bed_vs_exon_idFile | sort | uniq | wc -l`; chomp $genicN;
+			#my $totalN = `wc -l $inBedFile | awk '{print \$1}'`; chomp $totalN;
+			my $genicN = `cat $bed_vs_genic_idFile $bed_vs_exon_idFile | sort | uniq | wc -l | awk '{print \$1}'`; chomp $genicN;
 			
-			my $exonicN = `wc -l $bed_vs_exon_idFile | cut -d \" \" -f 1`; chomp $exonicN;
-			my $exon_cdsN = `wc -l $bed_vs_exon_cds_idpairFile | cut -d \" \" -f 1`; chomp $exon_cdsN;
-			my $exon_5utrN = `wc -l $bed_vs_exon_5utr_idpairFile | cut -d \" \" -f 1`; chomp $exon_5utrN;
-			my $exon_3utrN = `wc -l $bed_vs_exon_3utr_idpairFile | cut -d \" \" -f 1`; chomp $exon_3utrN;
+			my $exonicN = `wc -l $bed_vs_exon_idFile | awk '{print \$1}'`; chomp $exonicN;
+			my $exon_cdsN = `wc -l $bed_vs_exon_cds_idpairFile | awk '{print \$1}'`; chomp $exon_cdsN;
+			my $exon_5utrN = `wc -l $bed_vs_exon_5utr_idpairFile | awk '{print \$1}'`; chomp $exon_5utrN;
+			my $exon_3utrN = `wc -l $bed_vs_exon_3utr_idpairFile | awk '{print \$1}'`; chomp $exon_3utrN;
 			my $intronicN = $genicN - $exonicN;
 			
-			my $upstream_intergenicN = `wc -l  $bed_vs_upstream_intergenic_idpairFile | cut -d \" \" -f 1`; chomp $upstream_intergenicN;
-			my $downstream_intergenicN = `wc -l $bed_vs_downstream_intergenic_idpairFile | cut -d \" \" -f 1`; chomp  $downstream_intergenicN;
+			my $upstream_intergenicN = `wc -l  $bed_vs_upstream_intergenic_idpairFile | awk '{print \$1}'`; chomp $upstream_intergenicN;
+			my $downstream_intergenicN = `wc -l $bed_vs_downstream_intergenic_idpairFile | awk '{print \$1}'`; chomp  $downstream_intergenicN;
 			
 			my $genic_extN = `cat  $bed_vs_genic_idFile $bed_vs_upstream_idFile $bed_vs_downstream_idFile | sort | uniq | wc -l`; chomp $genic_extN;
 			my $deep_intergenicN = $totalN - $genic_extN;
@@ -495,6 +495,7 @@ print $cmd, "\n" if $verbose;
 system ($cmd);
 
 system ("rm -rf $cache") unless $keepCache;
+print "Done.\n";
 
 
 
