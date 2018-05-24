@@ -7,7 +7,7 @@
 hg38 gene	annotation/genes/gene2symbol.hg.20180317 gene2symbol
 hg38 gene	annotation/genomes/hg38/annotation/refGene_knownGene.bed transcript
 hg38 gene	annotation/genomes/hg38/annotation/refGene_knownGene_To_gene.txt transcript2gene
-hg38 rmsk	annotation/genomes/hg38/annotation/rmsk.bed
+hg38 rmsk	annotation/genomes/hg38/annotation/rmsk.bed.gz
 hg38 rmsk_RNA	annotation/genomes/hg38/annotation/rmsk.RNA.bed
 hg38 miRNA	annotation/genomes/hg38/annotation/miRNA.bed
 
@@ -36,7 +36,7 @@ hg38 genic	annotation/genomes/hg38/annotation/refGene_knownGene.meta.6.bed
 hg19 gene	annotation/genes/gene2symbol.hg gene2symbol
 hg19 gene	annotation/genomes/hg19/annotation/refGene_knownGene.bed transcript
 hg19 gene	annotation/genomes/hg19/annotation/refGene_knownGene_To_gene.txt transcript2gene
-hg19 rmsk	annotation/genomes/hg19/annotation/rmsk.bed
+hg19 rmsk	annotation/genomes/hg19/annotation/rmsk.bed.gz
 hg19 rmsk_RNA	annotation/genomes/hg19/annotation/rmsk.RNA.bed
 hg19 miRNA	annotation/genomes/hg19/annotation/miRNA.bed
 
@@ -64,7 +64,7 @@ hg19 genic	annotation/genomes/hg19/annotation/refGene_knownGene.meta.6.bed
 mm10 gene	annotation/genes/gene2symbol.mm gene2symbol
 mm10 gene	annotation/genomes/mm10/annotation/refGene_knownGene.bed transcript
 mm10 gene	annotation/genomes/mm10/annotation/refGene_knownGene_To_gene.txt transcript2gene
-mm10 rmsk	annotation/genomes/mm10/annotation/rmsk.bed
+mm10 rmsk	annotation/genomes/mm10/annotation/rmsk.bed.gz
 mm10 rmsk_RNA	annotation/genomes/mm10/annotation/rmsk.RNA.bed
 mm10 miRNA	annotation/genomes/mm10/annotation/miRNA.bed
 
