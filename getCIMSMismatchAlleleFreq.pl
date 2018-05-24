@@ -8,7 +8,7 @@ use Carp;
 use MyConfig;
 
 my $prog = basename ($0);
-my $cmdDir = "~/czlab_src/CTK/";#dirname ($0);
+my $cmdDir = dirname ($0);
 
 my $verbose = 0;
 my $cache = getDefaultCache ($prog);
@@ -35,7 +35,7 @@ Carp::croak "$cache already exists\n" if -d $cache;
 system("mkdir $cache");
 
 my %CIMStags;
-my %CIMSHash; # for step 4
+my %CIMSHash; 
 my $cmd;
 
 # 1. get the number of tags at each mutation position

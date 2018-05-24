@@ -38,7 +38,6 @@ if (@ARGV != 2)
 }
 
 my ($inputFile, $filterFile) = @ARGV;
-
 print STDERR "reading $filterFile ...\n" if $verbose;
 
 my $fin;

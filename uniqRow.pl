@@ -34,25 +34,29 @@ GetOptions ('c:s'=>\$criteria,
 
 if (@ARGV != 2)
 {
-	print STDERR "select uniq rows\n";
-	print STDERR "Usage: $prog [options] <in.txt> <out.txt>\n";
-	print STDERR " <in.txt>         : use \"-\" for stdin\n";
-	print STDERR " <out.txt>        : use \"-\" for stdout\n";
-	print STDERR "OPTIONS:\n";
-	print STDERR " -h               : with header line to be included\n";
-	print STDERR " -c     [string]  : criteria to sort ([random]|max_num|max_num_abs|min_num|min_num_abs|max_text|min_text|sum|mean|rowsum|rowmean|count)\n";
-	print STDERR " -id    [int]     : id column (from 0) used to group rows ($groupColIdx)\n";
-	print STDERR " -value [int]     : value column (from 0) used to compare rows ($compareColIdx)\n";
-	print STDERR " --one-based-index: 1-based column index\n";
-	print STDERR " --no-extra-col   : do not print extra columns other than the id and value columns\n";
-	print STDERR " --na-str [string]: NA string ($naString)\n";
-	print STDERR " -v               : verbose\n";
-	exit (0);
+	print "select uniq rows\n";
+	print "Usage: $prog [options] <in.txt> <out.txt>\n";
+	print " <in.txt>         : use \"-\" for stdin\n";
+	print " <out.txt>        : use \"-\" for stdout\n";
+	print "OPTIONS:\n";
+	print " -h               : with header line to be included\n";
+	print " -c     [string]  : criteria to sort ([random]|max_num|max_num_abs|min_num|min_num_abs|max_text|min_text|sum|mean|rowsum|rowmean|count)\n";
+	print " -id    [int]     : id column (from 0) used to group rows ($groupColIdx)\n";
+	print " -value [int]     : value column (from 0) used to compare rows ($compareColIdx)\n";
+	print " --one-based-index: 1-based column index\n";
+	print " --no-extra-col   : do not print extra columns other than the id and value columns\n";
+	print " --na-str [string]: NA string ($naString)\n";
+	print " -v               : verbose\n";
+	exit (1);
 }
+
 
 my ($inFile, $outFile) = @ARGV;
 
-print STDERR "CMD= $prog ", join (" ", @ARGV0), "\n";
+
+my $msgio = $outFile ne '-' ? *STDOUT : *STDERR;
+
+print $msgio "CMD= $prog ", join (" ", @ARGV0), "\n";
 if ($oneBasedIndex)
 {
 	$groupColIdx--;
@@ -83,14 +87,14 @@ if ($withHeader)
 
 my $nrow = 0;
 
-print STDERR "reading data from $inFile ...\n" if $verbose;
+print $msgio "reading data from $inFile ...\n" if $verbose;
 my $i = 0;
 while (my $line = <$fin>)
 {
 	chomp $line;
 	next if $line=~/^\s*$/;
 
-	print STDERR "$i ...\n" if $i % 100000 == 0 && $verbose;
+	print $msgio "$i ...\n" if $i % 100000 == 0 && $verbose;
 
 	$i++;
 	my @cols = split (/\t/, $line);
@@ -109,7 +113,7 @@ close ($fin) if $inFile ne '-';
 
 my $ngroup = keys %rowHash;
 
-print STDERR "$nrow rows, $ngroup uniq rows loaded\n" if $verbose;
+print $msgio "$nrow rows, $ngroup uniq rows loaded\n" if $verbose;
 
 
 my $fout;
@@ -123,7 +127,7 @@ else
 	open ($fout, ">$outFile") || Carp::croak "can not open file $outFile to write\n";
 }
 
-print STDERR "dumping unique rows ...\n" if $verbose;
+print $msgio "dumping unique rows ...\n" if $verbose;
 
 
 print $fout $header, "\n" if $withHeader;
@@ -136,7 +140,7 @@ foreach my $groupId (sort keys %rowHash)
 
 	my $row = "";
 
-	print STDERR "$i ...\n" if $i % 10000 == 0 && $verbose;
+	print $msgio "$i ...\n" if $i % 10000 == 0 && $verbose;
 	$i++;
 
 	if ($criteria eq 'random')

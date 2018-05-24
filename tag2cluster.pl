@@ -92,6 +92,9 @@ $maxGap = 0 if $collapseMode;
 
 my ($inBedFile, $outBedFile) = @ARGV;
 
+
+my $msgio = $outBedFile ne '-' ? *STDOUT : *STDERR;
+
 if ($collapseMode)
 {
 	Carp::croak "output format must be bed\n" if $outputFormat ne 'bed';
@@ -105,7 +108,7 @@ system ("mkdir $cache");
 
 my %tagCount;
 
-print STDERR "reading tags from $inBedFile ...\n" if $verbose;
+print $msgio "reading tags from $inBedFile ...\n" if $verbose;
 if ($bigFile)
 {
 	my $ret = splitBedFileByChrom ($inBedFile, $cache, v=>$verbose, "sort"=>1);
@@ -121,7 +124,7 @@ else
 	}
 }
 
-print STDERR "get tag count broken down into chromosomes ...\n" if $verbose;
+print $msgio "get tag count broken down into chromosomes ...\n" if $verbose;
 
 foreach my $chrom (sort keys %tagCount)
 {
@@ -129,11 +132,11 @@ foreach my $chrom (sort keys %tagCount)
 	my $n = $tagCount{$chrom};
 	$n = ref($n) eq 'HASH' ? $n = $n->{'n'} : @$n;
 
-	print STDERR "$chrom : $n tags\n" if $verbose;
+	print $msgio "$chrom : $n tags\n" if $verbose;
 }
 
 
-print STDERR "\n\nclustering tags ...\n" if $verbose;
+print $msgio "\n\nclustering tags ...\n" if $verbose;
 
 my @strands = ('b');
 @strands = qw(+ -) if $sameStrand;
@@ -152,7 +155,7 @@ else
 foreach my $s (@strands)
 {
 	
-	print STDERR "processing strand $s ...\n" if $verbose;
+	print $msgio "processing strand $s ...\n" if $verbose;
 	
 	if ($outputFormat eq 'wig')
 	{
@@ -165,10 +168,10 @@ foreach my $s (@strands)
 		if ($bigFile)
 		{
 			my $n = $tagCount{$chrom}->{'n'};
-			print STDERR "$n tags on chromosome $chrom\n" if $verbose;
+			print $msgio "$n tags on chromosome $chrom\n" if $verbose;
 
 			my $tmpFile = $tagCount{$chrom}->{'f'};
-			print STDERR "loading tags on chromsome $chrom from $tmpFile...\n" if $verbose;
+			print $msgio "loading tags on chromsome $chrom from $tmpFile...\n" if $verbose;
 			
 			my $fin;
 			open ($fin, "<$tmpFile") || Carp::croak "cannot open file $tmpFile to read\n";
@@ -178,8 +181,8 @@ foreach my $s (@strands)
             while (my $tags = readNextBedBlock ($fin, max (1, $maxGap + 1), 0, minBlockSize=> $minBlockSize))
 			{
 				my $n = @$tags;
-				print STDERR "$n tags loaded in $chrom block $blockIdx\n" if $verbose;
-				print STDERR "clustering $chrom block $blockIdx...\n" if $verbose;
+				print $msgio "$n tags loaded in $chrom block $blockIdx\n" if $verbose;
+				print $msgio "clustering $chrom block $blockIdx...\n" if $verbose;
             	$startIdx = doCluster ($tags, $s, $startIdx, $fout);
 				$blockIdx++;
 			}
@@ -188,9 +191,9 @@ foreach my $s (@strands)
 		{
 			$tags = $tagCount{$chrom};
 			my $n = @$tags;
-			print STDERR "$n tags loaded on chromosome $chrom\n" if $verbose;
+			print $msgio "$n tags loaded on chromosome $chrom\n" if $verbose;
 			
-			print STDERR "clustering $chrom ...\n" if $verbose;
+			print $msgio "clustering $chrom ...\n" if $verbose;
 			doCluster ($tags, $s, 0, $fout);
 		}
 	}
@@ -237,7 +240,7 @@ sub doCluster
 	}
 	
 	my $nc = @$clusters;
-	print STDERR "\n\n$nc clusters found\n" if $debug;
+	print $msgio "\n\n$nc clusters found\n" if $debug;
 
 	my $iter = $startIdx;
 	foreach my $clust (@$clusters)

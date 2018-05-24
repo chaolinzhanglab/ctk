@@ -1,0 +1,85 @@
+#<dbkey> <analysis> <path> [type]
+
+
+#***hg38***
+
+#for bed2annotation.pl
+hg38 gene	annotation/genes/gene2symbol.hg.20180317 gene2symbol
+hg38 gene	annotation/genomes/hg38/annotation/refGene_knownGene.bed transcript
+hg38 gene	annotation/genomes/hg38/annotation/refGene_knownGene_To_gene.txt transcript2gene
+hg38 rmsk	annotation/genomes/hg38/annotation/rmsk.bed
+hg38 rmsk_RNA	annotation/genomes/hg38/annotation/rmsk.RNA.bed
+hg38 miRNA	annotation/genomes/hg38/annotation/miRNA.bed
+
+
+#note: these are non-overlapping regions after clustering, to reduce computing time
+hg38 region	annotation/genomes/hg38/annotation/hg38.genic.bed genic
+
+hg38 region	annotation/genomes/hg38/annotation/refGene_knownGene.upstream.10k.cluster.bed upstream_10k
+hg38 region	annotation/genomes/hg38/annotation/refGene_knownGene.downstream.10k.cluster.bed downstream_10k
+
+hg38 region	annotation/dbCASE/db_hg38/exons/hg38.exon.uniq.cluster.bed exon
+
+hg38 region	annotation/genomes/hg38/annotation/refGene_knownGene.5utr.cluster.bed 5utr
+hg38 region	annotation/genomes/hg38/annotation/refGene_knownGene.3utr.cluster.bed 3utr
+hg38 region	annotation/genomes/hg38/annotation/refGene_knownGene.cds.cluster.bed cds
+
+#for tag2peak
+hg38 genic	annotation/genomes/hg38/annotation/refGene_knownGene.meta.6.bed
+
+
+
+
+#***hg19***
+
+#for bed2annotation.pl
+hg19 gene	annotation/genes/gene2symbol.hg gene2symbol
+hg19 gene	annotation/genomes/hg19/annotation/refGene_knownGene.bed transcript
+hg19 gene	annotation/genomes/hg19/annotation/refGene_knownGene_To_gene.txt transcript2gene
+hg19 rmsk	annotation/genomes/hg19/annotation/rmsk.bed
+hg19 rmsk_RNA	annotation/genomes/hg19/annotation/rmsk.RNA.bed
+hg19 miRNA	annotation/genomes/hg19/annotation/miRNA.bed
+
+
+#note: these are non-overlapping regions after clustering, to reduce computing time
+hg19 region	annotation/genomes/hg19/annotation/hg19.genic.bed genic
+
+hg19 region	annotation/genomes/hg19/annotation/refGene_knownGene.upstream.10k.cluster.bed upstream_10k
+hg19 region	annotation/genomes/hg19/annotation/refGene_knownGene.downstream.10k.cluster.bed downstream_10k
+
+hg19 region	annotation/dbCASE/db_hg19/exons/hg19.exon.uniq.cluster.bed exon
+
+hg19 region	annotation/genomes/hg19/annotation/refGene_knownGene.5utr.cluster.bed 5utr
+hg19 region	annotation/genomes/hg19/annotation/refGene_knownGene.3utr.cluster.bed 3utr
+hg19 region	annotation/genomes/hg19/annotation/refGene_knownGene.cds.cluster.bed cds
+
+#for tag2peak
+hg19 genic	annotation/genomes/hg19/annotation/refGene_knownGene.meta.6.bed
+
+
+
+#***mm10****
+
+#for bed2annotation.pl
+mm10 gene	annotation/genes/gene2symbol.mm gene2symbol
+mm10 gene	annotation/genomes/mm10/annotation/refGene_knownGene.bed transcript
+mm10 gene	annotation/genomes/mm10/annotation/refGene_knownGene_To_gene.txt transcript2gene
+mm10 rmsk	annotation/genomes/mm10/annotation/rmsk.bed
+mm10 rmsk_RNA	annotation/genomes/mm10/annotation/rmsk.RNA.bed
+mm10 miRNA	annotation/genomes/mm10/annotation/miRNA.bed
+
+
+#note: these are non-overlapping regions after clustering, to reduce computing time
+mm10 region	annotation/genomes/mm10/annotation/mm10.genic.bed genic
+
+mm10 region	annotation/genomes/mm10/annotation/refGene_knownGene.upstream.10k.cluster.bed upstream_10k
+mm10 region	annotation/genomes/mm10/annotation/refGene_knownGene.downstream.10k.cluster.bed downstream_10k
+
+mm10 region	annotation/dbCASE/db_mm10/exons/mm10.exon.uniq.cluster.bed exon
+
+mm10 region	annotation/genomes/mm10/annotation/refGene_knownGene.5utr.cluster.bed 5utr
+mm10 region	annotation/genomes/mm10/annotation/refGene_knownGene.3utr.cluster.bed 3utr
+mm10 region	annotation/genomes/mm10/annotation/refGene_knownGene.cds.cluster.bed cds
+
+#for tag2peak
+mm10 genic	annotation/genomes/mm10/annotation/refGene_knownGene.meta.6.bed

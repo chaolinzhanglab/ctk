@@ -43,7 +43,11 @@ if (@ARGV != 2)
 }
 
 
-print "CMD = $prog ", join (" ", @ARGV0), "\n" if $verbose;
+my ($inFile, $outFile) = @ARGV;
+
+my $msgio = $outFile eq '-' ? *STDERR :  *STDOUT;
+
+print $msgio "CMD = $prog ", join (" ", @ARGV0), "\n" if $verbose;
 
 
 #Carp::croak "$tmpDir already exists\n" if -d $tmpDir;
@@ -55,8 +59,6 @@ my $barcodeStartFilterLen = length($barcodeStartWith);
 my $barcodeEndFilterLen = length ($barcodeEndWith);
 
 Carp::croak "errors in filter patterns\n" if $barcodeStartFilterLen > $barcodeLen || $barcodeEndFilterLen > $barcodeLen;
-
-my ($inFile, $outFile) = @ARGV;
 
 
 my ($fin, $fout);
@@ -106,7 +108,7 @@ while (my $line = <$fin>)
 		Carp::croak "seq and qual do not have the same size\n" if length ($seq) != length ($qual);
 	}
 	
-	print STDERR "$iter ...\n" if $verbose && $iter % 100000 == 0;
+	print $msgio "$iter ...\n" if $verbose && $iter % 100000 == 0;
 
 	$iter++;
 

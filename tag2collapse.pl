@@ -9,10 +9,13 @@ use Getopt::Long;
 use Carp;
 use POSIX;
 
+use sort 'stable';
+
 use MyConfig;
-use Bed;
+use Bed 1.02;
 use Motif 1.01;
 use Common;
+
 
 my $prog = basename($0);
 
@@ -46,9 +49,6 @@ my $debug = 0;
 
 
 my @ARGV0 = @ARGV;
-
-Carp::croak "$cache already exists\n" if -d $cache;
-system ("mkdir $cache");
 
 GetOptions (
 			'big'=>\$bigFile,
@@ -100,10 +100,11 @@ if (@ARGV != 2)
 
 
 my ($inBedFile, $outBedFile) = @ARGV;
+my $msgio = $outBedFile eq '-' ? *STDERR :  *STDOUT;
 
 $randomBarcode = $randomLinker if ($randomLinker != 0 && $randomBarcode == 0);
 
-print "CMD = $prog ", join (' ', @ARGV0), "\n"; # if $verbose;
+print $msgio "CMD = $prog ", join (' ', @ARGV0), "\n"; # if $verbose;
 
 
 #check consistency of parameters
@@ -150,6 +151,11 @@ elsif ($sequencingErrorModel ne '' && $sequencingErrorModel ne 'em-global' && $s
 }
 
 
+Carp::croak "$cache already exists\n" if -d $cache;
+system ("mkdir $cache");
+
+
+
 #read data and split if necessary
 my %tagCount;
 
@@ -161,7 +167,13 @@ if ($bigFile)
 }
 else
 {
-	my $tags = readBedFile ($inBedFile, $verbose);
+	#my $tags = readBedFile ($inBedFile, $verbose);
+
+	my $sortedBedFile = $cache . "/". basename ($inBedFile) . "sort";
+	sortBedFile ($inBedFile, $sortedBedFile, 0, $cache);
+	my $tags = readBedFile ($sortedBedFile, $verbose);
+	#we now sort the bed file so that we get the same results with or without big flag (cz 05/05/2018)
+
 	foreach my $t (@$tags)
 	{
 		my $chrom = $t->{"chrom"};
@@ -388,6 +400,8 @@ sub tag2collapse
 	{
 		print "cluster $iter ...\n" if $debug;
 		$iter++;
+
+
 		#count the number of tags (with copy number considered) in each cluster
 		my $score = countTagInCluster ($clust, $weight);			
 
@@ -398,14 +412,20 @@ sub tag2collapse
 			$clust = \@clustSorted;
 		}
 
+
 		if ($randomBarcode)
 		{
 			#divide tags according to the random linker
 			my %tagsInClust;
+			my $linkerIter = 0;
 			foreach my $tag (@$clust)
 			{
 				my $linker = getRandomLinker ($tag->{"name"});
 				next if $linker =~/[^ACGT]/i;
+
+				#$linkerIter++ unless exists $tagsInClust{$linker};
+				$tagsInClust{$linker}->{'iter'} = $linkerIter++;
+				#add linkerIter to allow stable sorting
 
 				push @{$tagsInClust{$linker}->{"tag"}}, $tag;
 				my $s = $weight ? $tag->{"score"} : 1;
@@ -432,14 +452,20 @@ sub tag2collapse
 				#output summary information if requested
 				print $fout2 join ("\t", $EM_summary->{'k'}, $EM_summary->{'N'}, $EM_summary->{'e'}), "\n" 
 				if $sequencingErrorFile ne '';
-				
+			
 
 				#output
 				my $nuniq = 0; #No of unique reads at this position
-				foreach my $linker (sort {$tagsInClust{$b}->{'error'} <=> $tagsInClust{$a}->{'error'}} keys %tagsInClust)
+				
+				my @sortedLinkers = sort {$tagsInClust{$a}{'iter'} <=> $tagsInClust{$b}{'iter'}} keys %tagsInClust;
+				
+				foreach my $linker (sort {$tagsInClust{$b}->{'error'} <=> $tagsInClust{$a}->{'error'} || $tagsInClust{$b}->{'n'} <=> $tagsInClust{$a}->{'n'}} @sortedLinkers)
+				#foreach my $linker (sort {$tagsInClust{$b}->{'error'} <=> $tagsInClust{$a}->{'error'} || $a cmp $b} keys %tagsInClust)
 				{	#sort according to confidence
+
+					#print "e=", $tagsInClust{$linker}->{'error'}, "\n";
 					my $tagsInClustWithSameLinker = $tagsInClust{$linker};
-					
+
 					#if nothing is significant, output the best one
 					#because we believe there is at least one real unique tag
 					$tagsInClustWithSameLinker->{"error"} = 100 if $nuniq == 0 && $tagsInClustWithSameLinker->{"error"} < $EM;
@@ -456,6 +482,7 @@ sub tag2collapse
 					#{
 					$representativeTag->{"score"} = sprintf ("%.2f", $tagsInClustWithSameLinker->{"error"});
 					#}
+
 					if (not $keepTagName)
 					{
 						$representativeTag->{"name"} .= "[o=" . $tagsInClustWithSameLinker->{"score"} . "]";
@@ -523,7 +550,7 @@ sub mixtureEM
 		$fixError = 1;
 	}
 
-	my @linker = keys %$tags;
+	my @linker = sort keys %$tags;
 	my $debugOld = $debug;
 	$debug = 1 if @linker > $maxN; #turn on the debug flag for more output when there are a lot of tags and thus it is very slow
 	
@@ -726,7 +753,7 @@ sub mixtureEMSparse
 		$fixError = 1;
 	}
 
-	my @linker = keys %$tags;
+	my @linker = sort keys %$tags;
 	my $debugOld = $debug;
 	$debug = 1 if @linker > $maxN; #turn on the debug flag for more output when there are a lot of tags and thus it is very slow
 	
@@ -740,7 +767,7 @@ sub mixtureEMSparse
 	if (@linker == 1)
 	{
 		my $linker = $linker[0];
-		$tags->{$linker}->{"error"} = "100";
+		$tags->{$linker}->{"error"} = "100" + rand (1e-5);
 		$tags->{$linker}->{"n"} = $tags->{$linker}->{"score"};
 		return {k=>1, N=> $tags->{$linker}->{"score"}, L=> length($linker), e=>0, E=> 0};
 	}

@@ -58,6 +58,9 @@ if (@ARGV != 2)
 
 my ($in, $out) = @ARGV;
 
+my $msgio = $out eq '-' ? *STDERR : *STDOUT;
+
+
 my $offset;
 if ($fastqFormat eq 'solexa')
 {
@@ -73,7 +76,7 @@ else
 }
 
 
-print STDERR "CMD = $prog ", join (" ", @ARGV0), "\n" if $verbose;
+print $msgio "CMD = $prog ", join (" ", @ARGV0), "\n" if $verbose;
 
 #filter by quality scores
 my @cols = split (",", $filterStr);
@@ -81,7 +84,7 @@ foreach my $f (@cols)
 {
 	$f=~/^(\S*?):(\d+)\-(\d+):(\S+)/;
 	
-	print STDERR "f=$f\n" if $verbose;
+	print $msgio "f=$f\n" if $verbose;
 	
 	my $ff = {start=>$2, end=>$3, score=>$4};
 	my $subName = $1;
@@ -103,7 +106,7 @@ foreach my $f (@cols)
 
 my $nfilters = @filters;
 
-print STDERR "$nfilters filters detected\n" if $verbose;
+print $msgio "$nfilters filters detected\n" if $verbose;
 
 #filter by index
 if ($index ne '')
@@ -243,7 +246,7 @@ while (my $line = <$fin>)
 	#($seqId, $seq, $score) = ("", "", "");
 	$iter++;
 		
-	print STDERR "$iter ...\n" if $verbose && $iter % 100000 == 0;
+	print $msgio "$iter ...\n" if $verbose && $iter % 100000 == 0;
 }
 
 close ($fin) if $in ne '-';

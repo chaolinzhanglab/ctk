@@ -136,7 +136,7 @@ if ($trackPosition)
 
 	if ($mutationPosSummaryFile ne '')
 	{
-		$cmd = "cut -f 2 $mutationPositionFile | sort -n | uniq -c > $mutationPosSummaryFile";
+		$cmd = "cut -f 2 $mutationPositionFile | sort -n | uniq -c | awk '{print \$2\"\\t\"\$1}'> $mutationPosSummaryFile";
 		$ret = system ($cmd);
 		print "CMD=$cmd failed: $?\n" if $ret != 0;
 	}

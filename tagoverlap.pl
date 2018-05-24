@@ -55,7 +55,7 @@ if (@ARGV != 2)
 {
 	print "Find tags overlap with particular regions\n";
 	print "Usage1: $prog [options] <tags.bed> <overlap.out>\n";
-	print " <tags.bed> : gz files accepted. use - for stdin\n";
+	print " <tags.bed> : gz files accepted. use - for stdin or stdout\n";
 	print "Usage2: $prog [options] <tags_dir_by_chrom> <overlap.out>\n";
 	print "OPTIONS:\n";
 	print " -big              : either region or tag file is big\n";
@@ -78,10 +78,15 @@ if (@ARGV != 2)
 
 my ($tagBedFile, $outFile) = @ARGV;
 
-print "non-redundant = $nonRedundant\n" if $verbose;
-print "keep-score = $keepScore\n" if $verbose;
-print "keep-tag-name = $keepTagName\n" if $verbose;
-print "loading tags from $tagBedFile ...\n" if $verbose;
+my $msgio = $outFile eq '-' ? *STDERR : *STDOUT;
+
+
+print $msgio "non-redundant = $nonRedundant\n" if $verbose;
+print $msgio "keep-score = $keepScore\n" if $verbose;
+print $msgio "keep-tag-name = $keepTagName\n" if $verbose;
+print $msgio "loading tags from $tagBedFile ...\n" if $verbose;
+
+
 my %tagCount;
 
 if (-f $tagBedFile || $tagBedFile eq '-')
@@ -94,12 +99,12 @@ if (-f $tagBedFile || $tagBedFile eq '-')
 		my $tagCache = "$cache/tags";
 		system ("mkdir $tagCache");
 
-		my $ret = splitBedFileByChrom ($tagBedFile, $tagCache, v=>$verbose, "sort"=>1);
+		my $ret = splitBedFileByChrom ($tagBedFile, $tagCache, v=>$verbose, "sort"=>1, "msgio"=>$msgio);
 		%tagCount = %$ret;
 	}
 	else
 	{
-		my $tags = readBedFile ($tagBedFile, $verbose);
+		my $tags = readBedFile ($tagBedFile, $verbose, $msgio);
 
 		foreach my $t (@$tags)
 		{
@@ -110,7 +115,7 @@ if (-f $tagBedFile || $tagBedFile eq '-')
 }
 elsif (-d $tagBedFile)
 {
-	print "check tags in dir $tagBedFile ...\n" if $verbose;
+	print $msgio "check tags in dir $tagBedFile ...\n" if $verbose;
 
 	#we assume these files are already sorted
 	my @fnames = `ls $tagBedFile`;
@@ -135,26 +140,26 @@ else
 	Carp::croak "invalid tag file or dir: $?\n";
 }
 
-print "get tag count broken down into chromosomes ...\n" if $verbose;
+print $msgio "get tag count broken down into chromosomes ...\n" if $verbose;
 
 foreach my $chrom (sort keys %tagCount)
 {
 	if (ref($tagCount{$chrom}) eq 'HASH')
 	{
 		my $n = $tagCount{$chrom}->{"n"};
-		print "$chrom : $n tags\n" if $verbose;
+		print $msgio "$chrom : $n tags\n" if $verbose;
 	}
 	else
 	{
 		my $n = @{$tagCount{$chrom}};
-		print "$chrom : $n tags\n" if $verbose;
+		print $msgio "$chrom : $n tags\n" if $verbose;
 	}
 }
 
 my %regionHash= ();
 
 Carp::croak "$regionFile does not exists\n" unless -f $regionFile;
-print "reading regions from $regionFile ...\n" if $verbose;
+print $msgio "reading regions from $regionFile ...\n" if $verbose;
 
 my $n = 0;
 if ($big)
@@ -162,7 +167,7 @@ if ($big)
 	my $regionCache = "$cache/regions";
 	system ("mkdir $regionCache");
 
-	my $ret = splitBedFileByChrom ($regionFile, $regionCache, $verbose);
+	my $ret = splitBedFileByChrom ($regionFile, $regionCache, v=>$verbose, msgio=>$msgio);
 	%regionHash = %$ret;
 
 	foreach my $chrom (keys %regionHash)
@@ -172,7 +177,7 @@ if ($big)
 }
 else
 {
-	my $regions = readBedFile ($regionFile, $verbose);
+	my $regions = readBedFile ($regionFile, $verbose, $msgio);
 	$n = @$regions;	
 	foreach my $r (@$regions)
 	{
@@ -181,27 +186,34 @@ else
 	}
 }
 
-print "$n regions loaded\n" if $verbose;
+print $msgio "$n regions loaded\n" if $verbose;
 
 
 
-print "searching for overlapping tags ...\n" if $verbose;
+print $msgio "searching for overlapping tags ...\n" if $verbose;
 
 my @strand = ('b');
 @strand = qw(+ -) if $separateStrand;
 
 my $fout;
-open ($fout, ">$outFile") || Carp::croak "can not open file $outFile to write\n";
 
+if ($outFile eq '-')
+{
+	$fout = *STDOUT;
+}
+else
+{
+	open ($fout, ">$outFile") || Carp::croak "can not open file $outFile to write\n";
+}
 
 foreach my $chrom (sort keys %regionHash)
 {
-	print "processing chrom $chrom ...\n" if $verbose;
+	print $msgio "processing chrom $chrom ...\n" if $verbose;
 	next unless exists $tagCount {$chrom};
 
 	#prepare regions
 
-	print "preparing regions ...\n" if $verbose;
+	print $msgio "preparing regions ...\n" if $verbose;
 	my $regionsOnChrom;
 
 	#Carp::croak ref($regionHash{$chrom}), "\n";
@@ -212,10 +224,10 @@ foreach my $chrom (sort keys %regionHash)
 	else
 	{
 		my $tmpFile = $regionHash{$chrom}->{'f'};
-		print "loading regions on chromsome $chrom from $tmpFile...\n" if $verbose;
-		$regionsOnChrom = readBedFile ($tmpFile, $verbose);
+		print $msgio "loading regions on chromsome $chrom from $tmpFile...\n" if $verbose;
+		$regionsOnChrom = readBedFile ($tmpFile, $verbose, $msgio);
 		my $n = @$regionsOnChrom;
-		print "$n regions loaded on chromosome $chrom\n" if $verbose;
+		print $msgio "$n regions loaded on chromosome $chrom\n" if $verbose;
 	}
 
 	my %regionsOnChromHash;
@@ -240,7 +252,7 @@ foreach my $chrom (sort keys %regionHash)
 
 	#prepare tags
 	
-	print "preparing tags ...\n" if $verbose;
+	print $msgio "preparing tags ...\n" if $verbose;
 
 	if (ref ($tagCount{$chrom}) eq 'ARRAY')
 	{
@@ -257,14 +269,14 @@ foreach my $chrom (sort keys %regionHash)
 		while (my $block = readNextBedBlock ($fin, max (1, $ext5 + $ext3 + 1), 0, minBlockSize=> $minBlockSize))
 		{
 			my $n = @$block;
-			print "block $iter : $n tags\n" if $verbose;
+			print $msgio "block $iter : $n tags\n" if $verbose;
 			$iter++;
 			processBlock ($block, \%regionsOnChromHash, $chrom, $separateStrand, $ext5, $ext3, $reverse, $fout);
 		}
 		close ($fin);
 	}
 }
-close ($fout);
+close ($fout) unless $outFile eq '-';
 
 system ("rm -rf $cache") unless $keepCache;
 
@@ -311,13 +323,13 @@ sub processBlock
 
 	foreach my $s (@strand)
 	{
-		print "finding overlapping tags on strand $s of $chrom ...\n" if $verbose;
+		print $msgio "finding overlapping tags on strand $s of $chrom ...\n" if $verbose;
 		next unless exists $regionsOnChromHash->{$s} && exists $tagsOnChromHash{$s};
 
 		my $nr = @{$regionsOnChromHash->{$s}};
 		my $nt = @{$tagsOnChromHash{$s}};
 
-		print "region number = $nr, tag number = $nt\n" if $verbose;
+		print $msgio "region number = $nr, tag number = $nt\n" if $verbose;
 
 		findOverlapTags ($tagsOnChromHash{$s}, $regionsOnChromHash->{$s}, $reverse, $fout);
 		

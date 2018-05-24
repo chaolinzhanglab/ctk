@@ -76,7 +76,9 @@ if (@ARGV != 2)
 	exit (1);
 }
 
-print "CMD = $prog ", join (' ', @ARGV0), "\n" if $verbose;
+my ($inBedFile, $outFile) = @ARGV;
+my $msgio = $outFile eq '-' ? *STDERR :  *STDOUT;
+print $msgio "CMD = $prog ", join (' ', @ARGV0), "\n" if $verbose;
 
 system ("mkdir $cache");
 
@@ -103,7 +105,7 @@ if ($confFile ne '')
 else
 {
 	#take the default, assuming it is located in the same directory as the script
-	$confFile = "$cmdDir/annotation.loc";
+	$confFile = "$cmdDir/ctk.loc";
 }
 
 
@@ -114,8 +116,6 @@ if ($customBedFile ne '')
 	Carp::croak "cannot file $customBedFile" unless -f $customBedFile;
 }
 
-my ($inBedFile, $outFile) = @ARGV;
-
 
 #save the original id
 my $inBedFileTmp = "$cache/in.bed";
@@ -125,7 +125,10 @@ my $lineNoFile = "$cache/in.lineNo";
 
 #NOTE: "cat: write error: Broken pipe" means that cat was attempting to write stdout to the stdin of another process but the other process terminated. This will happen for every one of the cat <some file> | head -<n> commands when there are more than <n> lines in <some file>. The crude solution would be to discard the error messages
 
-my $cmd = "cat $inBedFile | grep -v \"^track\" 2>/dev/null | head -n 1 | awk '{print NF}' > $lineNoFile";
+#my $cmd = "cat $inBedFile | grep -v \"^track\" 2>/dev/null | head -n 1 | awk '{print NF}' > $lineNoFile";
+
+my $cmd = "cat $inBedFile 2>/dev/null | grep -v \"^track\" 2>/dev/null | head -n 1 | awk '{print NF}' > $lineNoFile";
+
 system ($cmd);
 
 my $colNum = `cat $lineNoFile`;
@@ -167,6 +170,14 @@ foreach my $analysis (sort keys %analyses)
 	print "get $analysis annotation ...\n" if $verbose;
 	my $locationInfo = $analysis eq 'custom' ? {custom=>$customBedFile} : getLocationInfo ($confFile, $dbkey, $analysis);
 
+	if (keys %$locationInfo == 0)
+	{
+		my $msg = "cannot locate $analysis annotation bed file";
+		$msg .= " for $dbkey" if $dbkey ne '';
+
+		Carp::croak $msg, "\n";
+	}
+
 	#Carp:croak Dumper ($locationInfo), "\n";
 	my $tmpOutFile = "$cache/$analysis.out";
 
@@ -186,7 +197,7 @@ foreach my $analysis (sort keys %analyses)
 
 		#gene_id gene_symbol
 		my $cmd = "perl $cmdDir/bed2gene2symbol.pl --no-region-id $bigFlag $ssFlag $verboseFlag $inBedFile $transcriptBedFile $transcript2geneFile $gene2symbolFile $tmpOutFile";
-		print "$cmd\n" if $verbose;
+		print $msgio "$cmd\n" if $verbose;
 
 		my $ret = system ($cmd);
 		Carp::croak "$cmd failed: $?\n" if $ret != 0;
@@ -491,11 +502,11 @@ foreach my $g (@fileInfo)
 system ("echo \"$headerLine\" > $outFile");
 $cmd .= ">> $outFile";
 
-print $cmd, "\n" if $verbose;
+print $msgio $cmd, "\n" if $verbose;
 system ($cmd);
 
 system ("rm -rf $cache") unless $keepCache;
-print "Done.\n";
+print $msgio "Done.\n" if $verbose;
 
 
 
@@ -542,14 +553,14 @@ sub bed2annot
 		my $bed_vs_annot_BedFile = "$cache/bed_vs_$name.bed";
 
 		my $cmd = "perl $cmdDir/tagoverlap.pl -d \"/##/\" $bigFlag $verboseFlag $keepCacheFlag -region $annotBedFile $inBedFile $bed_vs_annot_BedFile";
-		print $cmd,"\n" if $verbose;
+		print $msgio $cmd,"\n" if $verbose;
 
 		my $ret = system ($cmd);
 		Carp::croak "$cmd failed: $?\n" if $ret != 0;
 		my $bed_vs_annot_idpairFile = "$cache/bed_vs_$name.idpair";
 
 		$cmd = "cut -f 4,5 $bed_vs_annot_BedFile | awk -F \"/##/\" '{print \$1\"\\t\"\$2}' > $bed_vs_annot_idpairFile";
-		print $cmd, "\n" if $verbose;
+		print $msgio $cmd, "\n" if $verbose;
 		system ($cmd);
 
 		my $bed_vs_annot_idpairUniqFile = "$cache/bed_vs_$name.idpair.uniq";
@@ -559,7 +570,7 @@ sub bed2annot
 
 		#print annotation_id overlap_fraction
 		$cmd = "perl $cmdDir/selectRow.pl -f 3 -p -pt \"\" -s  $bed_vs_annot_idpairUniqFile $inBedFile | awk '{print \$2\"\\t\"\$3}' > $outFile";
-		print $cmd, "\n" if $verbose;
+		print $msgio $cmd, "\n" if $verbose;
 		$ret = system ($cmd);
 		Carp::croak "$cmd failed: $?\n" if $ret != 0;
 
@@ -571,25 +582,25 @@ sub bed2annot
 		my $bed_vs_annot_BedFile = "$cache/bed_vs_$name.bed";
 
 		my $cmd = "perl $cmdDir/tagoverlap.pl -d \"/##/\" $bigFlag $verboseFlag $ssFlag $keepCacheFlag --keep-score -region $inBedFile $annotBedFile $bed_vs_annot_BedFile";
-		print $cmd,"\n" if $verbose;
+		print $msgio $cmd,"\n" if $verbose;
 
 		my $ret = system ($cmd);
 		Carp::croak "$cmd failed: $?\n" if $ret != 0;
 		my $bed_vs_annot_idpairFile = "$cache/bed_vs_$name.idpair";
 																										#interval_id annot_id annot_score
 		$cmd = "cut -f 4,5 $bed_vs_annot_BedFile | awk -F \"/##/\" '{print \$1\"\\t\"\$2}' | awk '{print \$2\"\\t\"\$1\"\\t\"\$3}' > $bed_vs_annot_idpairFile";
-		print $cmd, "\n" if $verbose;
+		print $msgio $cmd, "\n" if $verbose;
 		system ($cmd);
 
 		my $bed_vs_annot_idpairUniqFile = "$cache/bed_vs_$name.idpair.uniq";
 		$cmd = "perl $cmdDir/uniqRow.pl $verboseFlag -value 2 -c $summaryMethod $bed_vs_annot_idpairFile $bed_vs_annot_idpairUniqFile";
-		print $cmd, "\n" if $verbose;
+		print $msgio $cmd, "\n" if $verbose;
 		$ret = system ($cmd);
 		Carp::croak "$cmd failed: $?\n" if $ret != 0;
 
 		#print annotation_id score
 		$cmd = "perl $cmdDir/selectRow.pl -f 3 -p -pt \"\" -s  $bed_vs_annot_idpairUniqFile $inBedFile | awk '{print \$2\"\\t\"\$3}' > $outFile";
-		print $cmd, "\n" if $verbose;
+		print $msgio $cmd, "\n" if $verbose;
 		$ret = system ($cmd);
 		Carp::croak "$cmd failed: $?\n" if $ret != 0;
 
@@ -601,19 +612,19 @@ sub bed2annot
 		my $bed_vs_annot_BedFile = "$cache/bed_vs_$name.bed";
 
 		my $cmd = "perl $cmdDir/tagoverlap.pl -d \"/##/\" $bigFlag $verboseFlag $ssFlag $keepCacheFlag -region $annotBedFile $inBedFile $bed_vs_annot_BedFile";
-		print $cmd,"\n" if $verbose;
+		print $msgio $cmd,"\n" if $verbose;
 
 		my $ret = system ($cmd);
 		Carp::croak "$cmd failed: $?\n" if $ret != 0;
 		my $bed_vs_annot_idpairFile = "$cache/bed_vs_$name.idpair";
 	
 		$cmd = "cut -f 4 $bed_vs_annot_BedFile | awk -F \"/##/\" '{print \$1\"\\t\"\$2}' > $bed_vs_annot_idpairFile";
-		print $cmd, "\n" if $verbose;
+		print $msgio $cmd, "\n" if $verbose;
 		system ($cmd);
 
 		#print all names joined together
 		$cmd = "perl $cmdDir/selectRow.pl -f 3 -p -pt \"\" -s  $bed_vs_annot_idpairFile $inBedFile | awk '{print \$2}' > $outFile";
-		print $cmd, "\n" if $verbose;
+		print $msgio $cmd, "\n" if $verbose;
 		$ret = system ($cmd);
 		Carp::croak "$cmd failed: $?\n" if $ret != 0;
 

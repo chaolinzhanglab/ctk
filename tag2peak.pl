@@ -115,10 +115,12 @@ if ($geneBedFile ne '' || $useExpr)
 	Carp::croak "$geneBedFile does not exist\n" unless -f $geneBedFile;
 }
 
-if ($dbkey ne '')
-{
-	Carp::croak "dbkey must be mm10 or hg19\n" unless $dbkey eq 'mm10' || $dbkey eq 'hg19';
-}
+
+#the lines below is expired because we check this later
+#if ($dbkey ne '')
+#{
+#	Carp::croak "dbkey must be mm10 or hg19\n" unless $dbkey eq 'mm10' || $dbkey eq 'hg19';
+#}
 
 
 if ($valleySeeking)
@@ -138,8 +140,10 @@ if ($dbkey ne '')
 	if ($geneBedFile eq '')
 	{
 		#get gene bed file
-		my $confFile = "$cmdDir/annotation.loc";
+		my $confFile = "$cmdDir/ctk.loc";
 		my $locationInfo = getLocationInfo ($confFile, $dbkey, "genic");
+		Carp::croak "cannot locate genic bed file for $dbkey\n" unless exists $locationInfo->{'genic'};
+
 		$geneBedFile = $locationInfo->{'genic'};
 		print "gene bed file=$geneBedFile\n" if $verbose;
 
@@ -439,6 +443,7 @@ if (-f $geneBedFile)
 	my %resultHash;
 	my $i = 0;
 
+	my $npeak = 0;
 	while (my $line = <$fin>)
 	{
 	    chomp $line;
@@ -499,10 +504,12 @@ if (-f $geneBedFile)
     	$peak->{'score'} = $peakHeight; #-log ($pvalue) / log(10);
     
     	print $fout bedToLine ($peak), "\n" if $pvalue <= $pvalueThreshold;
+		$npeak++;
 	}
 
 	close ($fin);
 	close ($fout);
+	Carp::croak "no significant peaks found\n" if $npeak == 0;
 }
 
 

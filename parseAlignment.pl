@@ -51,7 +51,7 @@ if (@ARGV != 2)
 }
 
 my ($inSAMFile, $outBedFile) = @ARGV;
-
+my $msgio = $outBedFile eq '-' ? *STDERR :  *STDOUT;
 my ($fin, $fout, $fout2);
 
 if ( $inSAMFile eq "-")
@@ -93,7 +93,7 @@ while (my $line = <$fin>)
 	next if $line=~/^\s*$/;
 	next if $line=~/^\@/;
 
-	print STDERR "$i ...\n" if $verbose && $i % 50000 == 0;
+	print $msgio "$i ...\n" if $verbose && $i % 50000 == 0;
 	$i++;
 
 	my $sam = lineToSam ($line); # a very lightweight parser
