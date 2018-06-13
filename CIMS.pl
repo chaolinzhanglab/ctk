@@ -226,7 +226,7 @@ for (my $i = 0; $i < $numIter; $i++)
 	print $cmd, "\n" if $verbose;
 	my $ret = system ($cmd);
 
-	print "CMD=$cmd failed: $?\n" if $ret != 0;
+	Carp::croak "CMD=$cmd failed: $?\n" if $ret != 0;
 
 	#
 	print "clustering mutation sites in $randomMutationBedFile ...\n" if $verbose;
@@ -237,7 +237,7 @@ for (my $i = 0; $i < $numIter; $i++)
 	$cmd .= " -big" if $big;
 	$ret = system ($cmd);
 
-	print "CMD=$cmd failed: $?\n" if $ret != 0;
+	Carp::croak "CMD=$cmd failed: $?\n" if $ret != 0;
 
 	#
 	print "counting the total tag number for each clustered mutation site in $randomMutationClusterFile ...\n" if $verbose;
@@ -247,7 +247,7 @@ for (my $i = 0; $i < $numIter; $i++)
 	
 	$cmd .= " -big" if $big;
 	$ret = system ($cmd);
-	print "CMD=$cmd failed: $?\n" if $ret != 0;
+	Carp::croak "CMD=$cmd failed: $?\n" if $ret != 0;
 
 	print "reading frequency of mutations and tag number for each mutation site\n" if $verbose;
 

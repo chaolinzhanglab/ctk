@@ -125,6 +125,20 @@ while (my $line=<$fin>)
 		if ($pos >= 0)
 		{
 			$chromStart = $t->{'strand'} eq '+' ? $chromStart + $pos : $chromEnd - $pos;
+
+			if ($chromStart < 0)
+			{
+				#cz fix 06/12/2018
+				#in some very rare cases, the mutation go outside the range
+				#as a quick and dirty fix, we do uniform sampling for these
+				
+				#uniform sampling
+            	$chromStart = $t->{'chromStart'} + 1; #do not allow changes in the first and last position
+            	$chromEnd = $t->{'chromEnd'} - 1;
+            	my $tagLen = $chromEnd - $chromStart + 1;
+            	$pos = int(rand($tagLen - $mutationSize + 1));
+            	$chromStart += $pos;
+			}
 		}
 		else
 		{
