@@ -83,3 +83,32 @@ mm10 region	annotation/genomes/mm10/annotation/refGene_knownGene.cds.cluster.bed
 
 #for tag2peak
 mm10 genic	annotation/genomes/mm10/annotation/refGene_knownGene.meta.6.bed
+
+
+#***dm6***
+
+#for bed2annotation.pl
+dm6 gene	annotation/genes/gene2symbol.dm gene2symbol
+dm6 gene	annotation/genomes/dm6/annotation/refGene.bed transcript
+dm6 gene	annotation/genomes/dm6/annotation/refGeneToGene.txt transcript2gene
+dm6 rmsk	annotation/genomes/dm6/annotation/rmsk.bed.gz
+dm6 rmsk_RNA	annotation/genomes/dm6/annotation/rmsk.RNA.bed
+dm6 miRNA	annotation/genomes/dm6/annotation/mirbase.dme.primary.bed
+
+
+#note: these are non-overlapping regions after clustering, to reduce computing time
+dm6 region	annotation/genomes/dm6/annotation/dm6.genic.bed genic
+
+dm6 region	annotation/genomes/dm6/annotation/refGene.upstream.10k.cluster.bed upstream_10k
+dm6 region	annotation/genomes/dm6/annotation/refGene.downstream.10k.cluster.bed downstream_10k
+
+dm6 region	annotation/dbCASE/db_dm6/exons/dm6.exon.uniq.cluster.bed exon
+
+dm6 region	annotation/genomes/dm6/annotation/refGene.5utr.cluster.bed 5utr
+dm6 region	annotation/genomes/dm6/annotation/refGene.3utr.cluster.bed 3utr
+dm6 region	annotation/genomes/dm6/annotation/refGene.cds.cluster.bed cds
+
+#for tag2peak
+dm6 genic	annotation/genomes/dm6/annotation/refGene.meta.6.bed
+
+
