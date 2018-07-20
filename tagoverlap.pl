@@ -206,7 +206,19 @@ else
 	open ($fout, ">$outFile") || Carp::croak "can not open file $outFile to write\n";
 }
 
-foreach my $chrom (sort keys %regionHash)
+my %chromosomes;
+foreach my $chrom (keys %regionHash)
+{
+	$chromosomes{$chrom} = 1;	
+}
+
+foreach my $chrom (keys %tagCount)
+{
+	$chromosomes{$chrom} = 1;
+}
+#important for the reverse mode; bug fix by cz 07/20/2018
+
+foreach my $chrom (sort keys %chromosomes)
 {
 	print $msgio "processing chrom $chrom ...\n" if $verbose;
 	next unless exists $tagCount {$chrom};
@@ -217,21 +229,32 @@ foreach my $chrom (sort keys %regionHash)
 	my $regionsOnChrom;
 
 	#Carp::croak ref($regionHash{$chrom}), "\n";
-	if (ref($regionHash{$chrom}) eq 'ARRAY')
+	if (exists $regionHash{$chrom})
 	{
-		$regionsOnChrom = $regionHash{$chrom};
+		if (ref($regionHash{$chrom}) eq 'ARRAY')
+		{
+			$regionsOnChrom = $regionHash{$chrom};
+		}
+		else
+		{
+			my $tmpFile = $regionHash{$chrom}->{'f'};
+			print $msgio "loading regions on chromsome $chrom from $tmpFile...\n" if $verbose;
+			$regionsOnChrom = readBedFile ($tmpFile, $verbose, $msgio);
+		}
+		
 	}
 	else
 	{
-		my $tmpFile = $regionHash{$chrom}->{'f'};
-		print $msgio "loading regions on chromsome $chrom from $tmpFile...\n" if $verbose;
-		$regionsOnChrom = readBedFile ($tmpFile, $verbose, $msgio);
-		my $n = @$regionsOnChrom;
-		print $msgio "$n regions loaded on chromosome $chrom\n" if $verbose;
+		#create an empty array
+		$regionsOnChrom = [];
 	}
+	my $n = @$regionsOnChrom;
+	print $msgio "$n regions loaded on chromosome $chrom\n" if $verbose;
 
-	my %regionsOnChromHash;
 
+	my %regionsOnChromHash = $separateStrand ? ('+'=>[], '-'=>[]) : ('b'=>[]);
+	#important for the reverse mode; bug fix by cz 07/20/2018
+	
 	foreach my $r (@$regionsOnChrom)
 	{
 		$r->{"score"} = 0;
