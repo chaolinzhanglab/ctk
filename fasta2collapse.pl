@@ -46,7 +46,7 @@ $cmd = "grep -v \\> $inFastaFile > $tmpSeqFile";
 print $cmd, "\n" if $verbose;
 system ($cmd);
 
-$cmd = "paste $tmpHeaderFile $tmpSeqFile | sort -k 2 | uniq -f 1 -c | awk '{print \$2\"#\"\$1\"\\n\"\$3}' > $outFastaFile";
+$cmd = "paste $tmpHeaderFile $tmpSeqFile | sort -T $tmpDir -k 2 | uniq -f 1 -c | awk '{print \$2\"#\"\$1\"\\n\"\$3}' > $outFastaFile";
 print $cmd, "\n" if $verbose;
 system ($cmd);
 system ("rm -rf $tmpDir");

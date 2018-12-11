@@ -68,8 +68,8 @@ else
 	system ($cmd);
 }
 
-my $cmd = "paste $tmpIDFile $tmpQualFile $tmpSeqFile| sort -k 3 | uniq -f 2 -c | awk '{print \$2\"#\"\$1\"\\n\"\$4\"\\n+\\n\"\$3}' > $outFastqFile";
-$cmd = "paste $tmpIDFile $tmpQualFile $tmpSeqFile| sort -k 3 | uniq -f 2 -c | awk '{print \$2\"#\"\$1\"\\n\"\$4\"\\n+\\n\"\$3}'" if $outFastqFile eq '-';
+my $cmd = "paste $tmpIDFile $tmpQualFile $tmpSeqFile| sort -T $tmpDir -k 3 | uniq -f 2 -c | awk '{print \$2\"#\"\$1\"\\n\"\$4\"\\n+\\n\"\$3}' > $outFastqFile";
+$cmd = "paste $tmpIDFile $tmpQualFile $tmpSeqFile| sort -T $tmpDir -k 3 | uniq -f 2 -c | awk '{print \$2\"#\"\$1\"\\n\"\$4\"\\n+\\n\"\$3}'" if $outFastqFile eq '-';
 
 print $cmd, "\n" if $verbose;
 system ($cmd);
