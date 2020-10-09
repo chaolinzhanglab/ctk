@@ -52,6 +52,7 @@ my @ARGV0 = @ARGV;
 
 GetOptions (
 	'big'=>\$big,
+	'minBlockSize:i'=>\$minBlockSize,
 	'p:f'=>\$pvalueThreshold,
 	'ss'=>\$separateStrand,
 	'valley-seeking'=>\$valleySeeking,
@@ -82,6 +83,7 @@ if (@ARGV != 2)
 	print "Options:\n";
 	#print " -e          : expression values indicated in the gene bed file\n";
     print " -big                   : big input file\n";
+	print " -minBlockSize  [int]   : minimim number of lines to read in each block for a big file ($minBlockSize)\n";
 	print " -ss                    : separate the two strands\n";
 	print " --valley-seeking       : find candidate peaks by valley seeking\n";
 	print " --valley-depth [float] : depth of valley if valley seeking ($valleyDepth)\n";
@@ -340,7 +342,7 @@ if (-f $geneBedFile)
 	my $geneTagCountTotal = 0;
 	map {$geneTagCountTotal += $geneTagCountHash{$_}->{'count'}} keys %geneTagCountHash;
 
-	Carp::croak "no tags??" if $geneTagCountTotal <= 0;
+	Carp::croak "No match between tags and gene references? check your chromosome names in your tag file\n" if $geneTagCountTotal <= 0;
 
 	print "total number of tags overlapping with specified reions: $geneTagCountTotal\n" if $verbose;
 

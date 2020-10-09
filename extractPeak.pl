@@ -93,6 +93,10 @@ else
     {
         open ($fin, "gunzip -c $inWiggleFile | ") || Carp::croak "cannot open file $inWiggleFile to read\n";
     }
+    elsif ($inWiggleFile =~/\.bz2$/)
+    {
+        open ($fin, "bunzip2 -c $inWiggleFile | ") || Carp::croak "cannot open file $inWiggleFile to read\n";
+    }
     else
     {
         open ($fin, "<$inWiggleFile") || Carp::croak "cannot open file $inWiggleFile to read\n";
