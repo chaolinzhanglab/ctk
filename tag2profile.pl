@@ -1,4 +1,4 @@
-#!/usr/bin/perl -w
+#!/usr/bin/env perl
 
 #this algorithm is efficient when the reads are the same (or similar ) sizes
 #it calculate tag numbers either in fixed size moving windows or in specified regions
@@ -6,6 +6,8 @@
 
 
 use strict;
+use warnings;
+
 use Getopt::Long;
 use Carp;
 use File::Basename;
@@ -14,6 +16,10 @@ use Data::Dumper;
 use MyConfig;
 use Common;
 use Bed;
+
+STDOUT->flush();
+STDERR->flush();
+
 
 my $prog = basename ($0);
 
@@ -454,9 +460,25 @@ if ($profileType eq 'region')
 			$r->{'score'} = $score;
 		}
 	}
-	writeBedFile ($regions, $outProfileFile);
+
+	if ($outputFormat eq 'bedgraph')
+	{
+		my $fout;
+		open ($fout, ">$outProfileFile") || Carp::croak "cannot openfile $outProfileFile to write\n";
+		print $fout "\n\ntrack type=bedGraph name=\"$trackName\" autoScale=on maxHeightPixels=128:36:16\n" if $trackName ne '';
+		foreach my $r (@$regions)
+		{
+			print $fout join ("\t", $r->{'chrom'}, $r->{'chromStart'}, $r->{'chromEnd'} + 1, $r->{'score'}), "\n";
+		}
+		close ($fout);
+	}
+	else
+	{
+		writeBedFile ($regions, $outProfileFile);
+	}
 }
 system ("rm -rf $cache") unless $keepCache;
+
 
 #this subroutine used global variable, so should never be moved to the library
 sub getProfile

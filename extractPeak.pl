@@ -1,4 +1,4 @@
-#!/usr/bin/perl -w
+#!/usr/bin/env perl
 
 use strict;
 use warnings;
@@ -92,10 +92,6 @@ else
     if ($inWiggleFile =~/\.gz$/)
     {
         open ($fin, "gunzip -c $inWiggleFile | ") || Carp::croak "cannot open file $inWiggleFile to read\n";
-    }
-    elsif ($inWiggleFile =~/\.bz2$/)
-    {
-        open ($fin, "bunzip2 -c $inWiggleFile | ") || Carp::croak "cannot open file $inWiggleFile to read\n";
     }
     else
     {

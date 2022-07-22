@@ -1,8 +1,9 @@
-#!/usr/bin/perl -w
+#!/usr/bin/env perl 
 
-use lib "/data/zhangc/perl_lib2";
 
 use strict;
+use warnings;
+
 use File::Basename;
 use Data::Dumper;
 use Getopt::Long;

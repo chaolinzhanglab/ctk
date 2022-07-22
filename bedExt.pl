@@ -1,4 +1,5 @@
-#!/usr/bin/perl -w
+#!/usr/bin/env perl
+
 #
 
 use strict;
@@ -80,10 +81,6 @@ else
 	{
 		open ($fin, "gunzip -c $in |") || Carp::croak "cannot open file $in to read\n";
 	}
-	elsif ($in =~/\.bz2$/)
-    {
-        open ($fin, "bunzip2 -c $in |") || Carp::croak "cannot open file $in to read\n";
-    }
 	else
 	{
 		open ($fin, "<$in") || Carp::croak "cannot open file $in to read\n";

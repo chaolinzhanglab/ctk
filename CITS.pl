@@ -1,7 +1,8 @@
-#!/usr/bin/perl -w
+#!/usr/bin/env perl
 #
 use strict;
 use warnings;
+
 use Getopt::Long;
 use File::Basename;
 use Carp;
@@ -55,7 +56,7 @@ my $ret = system ("mkdir $cache");
 Carp::croak "cannot mkdir $cache\n" if $ret != 0;
 
 ##
-print "remove tags with potential CITS ...\n" if $verbose;
+print "remove tags with potential CIMS ...\n" if $verbose;
 
 my $uniqTagCleanBedFile = "$cache/tag.clean.bed";
 
