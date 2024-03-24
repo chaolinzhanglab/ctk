@@ -505,7 +505,7 @@ if (-f $geneBedFile)
 		$peak->{'name'} .= "#" . join("#", $leftBoundary, $rightBoundary, $leftHalfPH, $rightHalfPH) if $valleySeeking;
     	$peak->{'score'} = $peakHeight; #-log ($pvalue) / log(10);
     
-    	print $fout bedToLine ($peak), "\n" if $pvalue <= $pvalueThreshold;
+    	print $fout bedToLine ($peak), "\n" if $pvalue <= $pvalueThreshold || $pvalue eq 'nd';
 		$npeak++;
 	}
 
