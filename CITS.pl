@@ -17,6 +17,8 @@ my $cmdDir = dirname ($0);
 
 my $bigFile = "";        #if yes, we need to use cache
 #my $minBlockSize = 2000000;
+my $maxN = -1; #max no of truncations, default=no limit, it will be slow when the number is large (e.g. > 5000)
+
 my $pvalueThreshold = 0.01;
 my $multiTestCorrection = "";
 my $maxGap = -1;
@@ -29,6 +31,7 @@ my $verbose = "";
 
 GetOptions (
 		'big'=>\$bigFile,
+		'maxN:i'=>\$maxN,
         'p:f'=>\$pvalueThreshold,
         'multi-test'=>\$multiTestCorrection,
         'gap:i'=>\$maxGap,
@@ -44,6 +47,7 @@ if (@ARGV != 3)
 	print " -big          : the input tag file is big\n";
 	print " -p   [double] : p-value threshold ($pvalueThreshold)\n";
 	print " --multi-test  : perform bonferroni multiple test correction\n";
+	print " --max-N [int] : max number of reads with truncations (default = -1, no limit, consider e.g., 5000 if it is too slow)\n";
 	print " --gap   [int] : max gap used to cluster CITS ($maxGap, -1=no cluster)\n";
 	print " -c   [string] : cache dir ($cache)\n";
 	print " -v            : verbose\n";
@@ -102,7 +106,9 @@ Carp::croak "CMD=$cmd failed: $?\n" if $ret != 0;
 print "identifying CITS ...\n" if $verbose;
 my $multTestFlag = $multiTestCorrection ? '--multi-test' : '';
 
-$cmd = "perl $cmdDir/tag2peak.pl $bigFlag $verboseFlag $keepCacheFlag -c $cache/tag2peak_cache -ss --prefix $prefix -gap $maxGap -p $pvalueThreshold $multTestFlag --gene $tagClusterCleanBedFile $uniqTagTruncBedFile $outCITSBedFile";
+my $maxPHFlag = $maxN > 0 ? "--maxPH $maxN" : "";
+
+$cmd = "perl $cmdDir/tag2peak.pl $bigFlag $verboseFlag $keepCacheFlag -c $cache/tag2peak_cache -ss --prefix $prefix $maxPHFlag -gap $maxGap -p $pvalueThreshold $multTestFlag --gene $tagClusterCleanBedFile $uniqTagTruncBedFile $outCITSBedFile";
 print $cmd, "\n" if $verbose;
 
 $ret = system($cmd);
